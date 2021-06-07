@@ -273,7 +273,7 @@ class Tracker:
                     else:             
                       self.path.append(center_rat)       
                        ##Check if rat reached Goal location                    
-                      if points_dist(center_rat, self.goal_location) < 50:                        
+                      if points_dist(center_rat, self.goal_location) < 25:                        
                            cv2.putText(self.disp_frame, "Goal location reached", (30,70), 0, 1, (0,250,0), 2) 
                            print('\nRat end trial ', self.trial_num, ' out of ', self.num_trials, '\nCount rat', self.count_rat, ' head', self.count_head)
                            self.count_rat=0    
@@ -299,7 +299,7 @@ class Tracker:
                    else:
                      self.centroid_list.append(self.pos_centroid)                    
                      ##Check if rat reached Goal location
-                     if points_dist(self.pos_centroid, self.goal_location) < 50:                        
+                     if points_dist(self.pos_centroid, self.goal_location) < 25:                        
                          cv2.putText(self.disp_frame, "\nGoal location reached", (30,70), 0, 1, (0,250,0), 2) 
                          print('Head end trial ', self.trial_num, ' out of ', self.num_trials, '\nCount rat', self.count_rat, ' head', self.count_head)
                          self.calculate_velocity(self.time_points)
@@ -409,7 +409,7 @@ class Tracker:
         #register that node to a list. 
         if self.pos_centroid is not None:
             for node_name in nodes_dict:
-                if points_dist(self.pos_centroid, nodes_dict[node_name]) < 30:                    
+                if points_dist(self.pos_centroid, nodes_dict[node_name]) < 25:                    
                     if self.record_detections: #condition to go into 'save mode'
                         self.saved_nodes.append(node_name)                        
                         self.node_pos.append(nodes_dict[node_name])
