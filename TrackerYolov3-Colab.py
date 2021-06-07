@@ -70,9 +70,9 @@ def load_StartNodes(self, num_trials):
           node = input('Enter START node of trial num {}: '.format(i+1))
           self.start_nodes.append(int(node))           
                         
-def define_variables(self, vp, nl, file_id, n, o):          
-        nsp = str(date.today()) + '_' + file_id
-        self.save = '{}/logs/'  + '{}'.format(o, nsp + '.txt')  #os.path.join(gui.save_path, nsp)
+def define_variables(self, vp, nl, file_id, n, out):          
+    
+        self.save = '{}/logs/{}_{}.log'.format(out, str(date.today()), file_id +'.txt')
         self.node_list = str(nl)
         self.cap = cv2.VideoCapture(str(vp))
 
@@ -101,33 +101,37 @@ def define_variables(self, vp, nl, file_id, n, o):
         ##set output video saved in folder video/'date_unique file name'.mp4
         self.codec = cv2.VideoWriter_fourcc(*'mp4v')    #if errors change to MP4V
         #codec = cv2.VideoWriter_fourcc(*'XVID')        #change format video .avi
-        self.save_video = nsp + '.mp4'                  # nsp + '.mp4'
+        self.save_video =  '{}/videos/{}_{}.mp4'.format(out, str(date.today()), file_id)                 # nsp + '.mp4'
         self.vid_fps =int(self.cap.get(cv2.CAP_PROP_FPS))
-        self.out = cv2.VideoWriter('/content/drive/MyDrive/videos/{}'.format(self.save_video), self.codec, self.vid_fps, (1176,712))   #.
-    
+        self.out = cv2.VideoWriter('{}'.format(self.save_video), self.codec, self.vid_fps, (1176,712))   #.    
         ## save first frame of the video [heatmap]
-        success, self.image = self.cap.read()
-        if success:
-           cv2.imwrite("first_frame.jpg", self.image)  # save frame as JPEG file
+       # success, self.image = self.cap.read()
+        #if success:
+         #  cv2.imwrite("first_frame.jpg", self.image)  # save frame as JPEG file
 
 class Tracker:
-    def __init__(self, vp, nl, file_id, o):
+    def __init__(self, vp, nl, file_id, out):
         '''Tracker class initialisations'''        
         self.num_trials = input("Enter num total trials: ")        
         ##set of threads to load network, input and variables
         threads = list()
+        ##thread to load network
         cnn = threading.Thread(target=load_network,args=(self, 1))
         threads.append(cnn)
-        session = threading.Thread(target=load_session,args=(self,1))     #     ,  
+        #thread to load session infos, date, rat number and goal location
+        session = threading.Thread(target=load_session,args=(self,1))      
         threads.append(session) 
-        var = threading.Thread(target=define_variables,args=(self,vp, nl, file_id, 1))   
+        ##thread to load all variables and create video and .txt saving path
+        var = threading.Thread(target=define_variables,args=(self,vp, nl, file_id, 1, out))   
         threads.append(var)           
         for thread in threads:
             thread.start()
         for thread in threads:
-            thread.join()            
+            thread.join() 
+        ##ask start node for each trial    
         load_StartNodes(self, self.num_trials) 
-        print('Network loaded', self.net)                        
+        print('Network loaded', self.net)            
+        #find location of goal node and all start nodes
         self.start_nodes_locations = self.find_location(self.node_list, self.start_nodes, self.goal)
         print('\nNumber of trials current session', self.num_trials, '\nGoal location node ', self.goal)   
         for i in range(0, len(self.start_nodes)):
@@ -248,7 +252,7 @@ class Tracker:
                  confidences.append((float(confidence)))
                  class_ids.append(class_id)
       ##apply non-max suppression- eliminate double boxes (boxes, confidences, conf_threshold, nms_threshold)
-        indexes = cv2.dnn.NMSBoxes(boxes, confidences, 0.75, 0.4) ##keep boxes with higher confidence
+        indexes = cv2.dnn.NMSBoxes(boxes, confidences, 0.70, 0.4) ##keep boxes with higher confidence
     ##go through the detections remeainingafter filtering out the one with confidence < 0.7
         if len(indexes)>0:   ##indices box= box[i], x=box[0],y=box[1],w=[box[2],h=box[3]]
           for i in indexes.flatten():
@@ -269,7 +273,7 @@ class Tracker:
                     else:             
                       self.path.append(center_rat)       
                        ##Check if rat reached Goal location                    
-                      if points_dist(center_rat, self.goal_location) < 40:                        
+                      if points_dist(center_rat, self.goal_location) < 50:                        
                            cv2.putText(self.disp_frame, "Goal location reached", (30,70), 0, 1, (0,250,0), 2) 
                            print('\nRat end trial ', self.trial_num, ' out of ', self.num_trials, '\nCount rat', self.count_rat, ' head', self.count_head)
                            self.count_rat=0    
@@ -285,15 +289,17 @@ class Tracker:
                           #not self.record_detections                   
                                                              
             if label == 'head':
-                 self.pos_centroid= (x,y)#int((x + w)/2), int((y + h)/2)
-                 if self.pos_centroid is not None:
+              if x is not None:
+                 center_head= (x,y)#int((x + w)/2), int((y + h)/2)
+                 if  center_head  is not None:
+                   self.pos_centroid = center_head
                    self.count_head += 1 
                    if self.start == True: 
                           self.find_start(self.pos_centroid)                    
                    else:
                      self.centroid_list.append(self.pos_centroid)                    
                      ##Check if rat reached Goal location
-                     if points_dist(self.pos_centroid, self.goal_location) < 40:                        
+                     if points_dist(self.pos_centroid, self.goal_location) < 50:                        
                          cv2.putText(self.disp_frame, "Goal location reached", (30,70), 0, 1, (0,250,0), 2) 
                          print('Head end trial ', self.trial_num, ' out of ', self.num_trials, '\nCount rat', self.count_rat, ' head', self.count_head)
                          self.calculate_velocity(self.time_points)
@@ -342,9 +348,13 @@ class Tracker:
                         
                 else:
                           lenght=0.30    ##30cm within islands
-                speed= round(lenght/difference, 3)
-                self.summary_trial.append([(start_node,end_node),(time_points[i][0],time_points[j][0]),difference,lenght,speed])
-                self.saved_velocities.append(speed)
+                try:
+                   speed = round(float(lenght)/float(difference), 3)
+                except ZeroDivisionError:
+                   speed= 0
+                finally:
+                 self.summary_trial.append([(start_node,end_node),(time_points[i][0],time_points[j][0]),difference,lenght,speed])
+                 self.saved_velocities.append(speed)
 
             
     @staticmethod
@@ -399,7 +409,7 @@ class Tracker:
         #register that node to a list. 
         if self.pos_centroid is not None:
             for node_name in nodes_dict:
-                if points_dist(self.pos_centroid, nodes_dict[node_name]) < 25:                    
+                if points_dist(self.pos_centroid, nodes_dict[node_name]) < 30:                    
                     if self.record_detections: #condition to go into 'save mode'
                         self.saved_nodes.append(node_name)                        
                         self.node_pos.append(nodes_dict[node_name])
@@ -477,7 +487,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     if args.vid_path is None: #or args.output is None
         sys.exit("Please provide path to input and output video files! See --help")
-    print('\nVideo path' , args.vid_path) #, 'save to ', args.output
+    print('\nVideo path' , args.vid_path, 'Logs output', args.output) #, 'save to ', args.output
 
     enter = input('Enter unique file name: ')
     file_id = '' if not enter else enter
@@ -487,7 +497,7 @@ if __name__ == "__main__":
     logger = logging.getLogger('')
     logger.setLevel(logging.INFO)
 
-    logfile_name = '{}/logs/log_{}_{}.log'.format(args.output, str(today), file_id)
+    logfile_name = '{}/log_{}_{}.log'.format(args.output, str(today), file_id)
 
     fh = logging.FileHandler(str(logfile_name))
     formatter = logging.Formatter('%(levelname)s : %(message)s')
@@ -499,7 +509,7 @@ if __name__ == "__main__":
     logger.info('Video Imported: {}'.format(args.vid_path))
     print('creating log files...')
     
-    Tracker(vp = args.vid_path, nl = node_list, file_id = file_id, o = args.output) #, out = args.output
+    Tracker(vp = args.vid_path, nl = node_list, file_id = file_id, out = args.output) 
 
 
     
