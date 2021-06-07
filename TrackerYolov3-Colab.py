@@ -206,7 +206,7 @@ class Tracker:
         w= 15 
         h=  13                  
         cv2.rectangle(self.disp_frame, (x-w,y+h), (x+w,y-h),(0,255,0), 2) 
-        if 2 < points_dist(center_rat, node) < 60: 
+        if points_dist(center_rat, node) < 60: 
                        self.trial_num += 1
                        print('\nTrial ', self.trial_num, '\nTracking start from ',center_rat, node, 'distance', round(points_dist(center_rat, node)))                      
                        logger.info('Recording Trial {}'.format(self.trial_num))                        
@@ -252,7 +252,7 @@ class Tracker:
                  confidences.append((float(confidence)))
                  class_ids.append(class_id)
       ##apply non-max suppression- eliminate double boxes (boxes, confidences, conf_threshold, nms_threshold)
-        indexes = cv2.dnn.NMSBoxes(boxes, confidences, 0.70, 0.4) ##keep boxes with higher confidence
+        indexes = cv2.dnn.NMSBoxes(boxes, confidences, 0.70, 0.2) ##keep boxes with higher confidence
     ##go through the detections remeainingafter filtering out the one with confidence < 0.7
         if len(indexes)>0:   ##indices box= box[i], x=box[0],y=box[1],w=[box[2],h=box[3]]
           for i in indexes.flatten():
@@ -270,10 +270,10 @@ class Tracker:
                     self.count_rat += 1                   
                     if self.start == True:
                           self.find_start(center_rat)                    
-                    else:             
+                    if self.record_detections:             
                       self.path.append(center_rat)       
                        ##Check if rat reached Goal location                    
-                      if points_dist(center_rat, self.goal_location) < 25:                        
+                      if points_dist(center_rat, self.goal_location) < 20:                        
                            cv2.putText(self.disp_frame, "Goal location reached", (30,70), 0, 1, (0,250,0), 2) 
                            print('\nRat end trial ', self.trial_num, ' out of ', self.num_trials, '\nCount rat', self.count_rat, ' head', self.count_head)
                            self.count_rat=0    
@@ -286,20 +286,20 @@ class Tracker:
                                   print('\nEnd session with ', self.trial_num, 'trials out of ', self.num_trials, '\nCount rat', self.count_rat, ' head', self.count_head)                                                                                                           
                                   self.end_session = True  
                          # self.create_heatmap()
-                          #not self.record_detections                   
+                                             
                                                              
             if label == 'head':
               if x is not None:
                  center_head= (x,y)#int((x + w)/2), int((y + h)/2)
-                 if  center_head  is not None:
+                 if center_head is not None:
                    self.pos_centroid = center_head
                    self.count_head += 1 
                    if self.start == True: 
                           self.find_start(self.pos_centroid)                    
-                   else:
+                   if self.record_detections:
                      self.centroid_list.append(self.pos_centroid)                    
                      ##Check if rat reached Goal location
-                     if points_dist(self.pos_centroid, self.goal_location) < 25:                        
+                     if points_dist(self.pos_centroid, self.goal_location) < 20:                        
                          cv2.putText(self.disp_frame, "\nGoal location reached", (30,70), 0, 1, (0,250,0), 2) 
                          print('Head end trial ', self.trial_num, ' out of ', self.num_trials, '\nCount rat', self.count_rat, ' head', self.count_head)
                          self.calculate_velocity(self.time_points)
@@ -409,7 +409,7 @@ class Tracker:
         #register that node to a list. 
         if self.pos_centroid is not None:
             for node_name in nodes_dict:
-                if points_dist(self.pos_centroid, nodes_dict[node_name]) < 25:                    
+                if points_dist(self.pos_centroid, nodes_dict[node_name]) < 20:                    
                     if self.record_detections: #condition to go into 'save mode'
                         self.saved_nodes.append(node_name)                        
                         self.node_pos.append(nodes_dict[node_name])
