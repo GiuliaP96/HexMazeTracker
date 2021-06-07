@@ -198,7 +198,7 @@ class Tracker:
 
         '''             
         ##calculate coordinate rectangle in start node 
-        print( '\n' , self.converted_time, '  Trial', self.trial_num +1 , ' Start node node', self.start_nodes[self.trial_num])       
+        print( '\n' , self.converted_time, ' Next Trial', self.trial_num +1 , ' Start node', self.start_nodes[self.trial_num])       
         print('Rat position', self.pos_centroid, 'Node', self.start_nodes_locations[self.trial_num])
         node =  self.start_nodes_locations[self.trial_num]
         x = int(node[0])
@@ -300,14 +300,14 @@ class Tracker:
                      self.centroid_list.append(self.pos_centroid)                    
                      ##Check if rat reached Goal location
                      if points_dist(self.pos_centroid, self.goal_location) < 50:                        
-                         cv2.putText(self.disp_frame, "Goal location reached", (30,70), 0, 1, (0,250,0), 2) 
+                         cv2.putText(self.disp_frame, "\nGoal location reached", (30,70), 0, 1, (0,250,0), 2) 
                          print('Head end trial ', self.trial_num, ' out of ', self.num_trials, '\nCount rat', self.count_rat, ' head', self.count_head)
                          self.calculate_velocity(self.time_points)
                          self.save_to_file(self.save)                         
                          self.count_head =0                      
                          ##Check if session is finished                                        
                          if self.trial_num == int(self.num_trials):   
-                                  cv2.putText(self.disp_frame, "Session finished", (30,70), 0, 1, (0,250,0), 2)                                  
+                                  cv2.putText(self.disp_frame, "\nEnd Session", (30,70), 0, 1, (0,250,0), 2)                                  
                                   print('Session ends with', self.trial_num)                                                                                                              
                               #    self.create_heatmap()                                  
                                   self.end_session = True                       
@@ -413,7 +413,7 @@ class Tracker:
                     if self.record_detections: #condition to go into 'save mode'
                         self.saved_nodes.append(node_name)                        
                         self.node_pos.append(nodes_dict[node_name])
-                        print('\nTrial', self.trial_num,  ' Node ', node_name,'\nTime', self.converted_time,' FPS ', fps)
+                        print('\nTrial', self.trial_num,  ' Node', node_name,'\nTime', self.converted_time,' FPS', round(fps, 3))
                         ###save timepoints for speed calculation - self.calculate_velocity(self.time_points)
                         if len(self.time_points) == 0:  
                            self.time_points.append([self.converted_time,node_name])
