@@ -72,7 +72,7 @@ def load_StartNodes(self, num_trials):
                         
 def define_variables(self, vp, nl, file_id, n, out):          
     
-        self.save = '{}/logs/{}_{}.log'.format(out, str(date.today()), file_id +'.txt')
+        self.save = '{}/logs/{}_{}'.format(out, str(date.today()), file_id +'.txt')
         self.node_list = str(nl)
         self.cap = cv2.VideoCapture(str(vp))
 
@@ -206,7 +206,7 @@ class Tracker:
         w= 15 
         h=  13                  
         cv2.rectangle(self.disp_frame, (x-w,y+h), (x+w,y-h),(0,255,0), 2) 
-        if points_dist(center_rat, node) < 60: 
+        if points_dist(center_rat, node) < 50: 
                        self.trial_num += 1
                        print('\nTrial ', self.trial_num, '\nTracking start from ',center_rat, node, 'distance', round(points_dist(center_rat, node)))                      
                        logger.info('Recording Trial {}'.format(self.trial_num))                        
