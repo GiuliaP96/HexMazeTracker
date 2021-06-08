@@ -206,7 +206,7 @@ class Tracker:
         w= 15 
         h=  13                  
         cv2.rectangle(self.disp_frame, (x-w,y+h), (x+w,y-h),(0,255,0), 2) 
-        if points_dist(center_rat, node) < 50: 
+        if points_dist(center_rat, node) < 60: 
                        self.trial_num += 1
                        print('\nTrial ', self.trial_num, '\nTracking start from ',center_rat, node, 'distance', round(points_dist(center_rat, node)))                      
                        logger.info('Recording Trial {}'.format(self.trial_num))                        
@@ -273,7 +273,7 @@ class Tracker:
                     if self.record_detections:             
                       self.path.append(center_rat)       
                        ##Check if rat reached Goal location                    
-                      if points_dist(center_rat, self.goal_location) <= 20:                        
+                      if points_dist(center_rat, self.goal_location) <= 22:                        
                            cv2.putText(self.disp_frame, "Goal location reached", (30,70), 0, 1, (0,250,0), 2) 
                            print('\nRat end trial ', self.trial_num, ' out of ', self.num_trials, '\nCount rat', self.count_rat, ' head', self.count_head)
                            self.count_rat=0    
@@ -299,7 +299,7 @@ class Tracker:
                    if self.record_detections:
                      self.centroid_list.append(self.pos_centroid)                    
                      ##Check if rat reached Goal location
-                     if points_dist(self.pos_centroid, self.goal_location) <= 20:                        
+                     if points_dist(self.pos_centroid, self.goal_location) <= 22:                        
                          cv2.putText(self.disp_frame, "\nGoal location reached", (30,70), 0, 1, (0,250,0), 2) 
                          print('Head end trial ', self.trial_num, ' out of ', self.num_trials, '\nCount rat', self.count_rat, ' head', self.count_head)
                          self.calculate_velocity(self.time_points)
@@ -396,21 +396,29 @@ class Tracker:
           ##annotate time, fps and goal node of the session          
         cv2.putText(frame, str(self.converted_time), (970,670), 
                         fontFace = FONT, fontScale = 0.75, color = (240,240,240), thickness = 1)         
-        
+        fps = 1./(time.time()-self.t1)
+        cv2.putText(frame, "FPS: {:.2f}".format(fps), (970,650), fontFace = FONT, fontScale = 0.75, color = (240,240,240), thickness = 1)          
         self.annotate_node(frame, point = self.goal_location, node = self.goal, t= 3)        
         
-        fps = 1./(time.time()-self.t1)
-        cv2.putText(frame, "FPS: {:.2f}".format(fps), (970,650), fontFace = FONT, fontScale = 0.75, color = (240,240,240), thickness = 1)              
-        
+        ##if traker is waiting rat to be in start node position
         if self.start==True:
+            cv2.putText(frame,'Next trial:' + str(self.trial_num+1), (60,60), 
+                        fontFace = FONT, fontScale = 0.75, color = (255,255,255), thickness = 1)
+            cv2.putText(frame,'Waiting start new trial...', (60,80), 
+                        fontFace = FONT, fontScale = 0.75, color = (255,255,255), thickness = 1)    
+            
             self.annotate_node(frame, point = self.start_nodes_locations[self.trial_num], node = self.start_nodes[self.trial_num] , t= 1)
 
-        #if the centroid position of rat is within 20 pixels of any node
+        #annotate all nodes the rat has traversed
+        for i in range(0, len(self.saved_nodes)):
+            self.annotate_node(frame, point = self.node_pos[i], node = self.saved_nodes[i], t= 2) ##t=2 walked node during the trial
+        #frame annotations during recording
+        if self.record_detections:          
+        #if the centroid position of rat is within 22 pixels of any node
         #register that node to a list. 
-        if self.pos_centroid is not None:
+          if self.pos_centroid is not None:
             for node_name in nodes_dict:
-                if points_dist(self.pos_centroid, nodes_dict[node_name]) <= 20:                    
-                    if self.record_detections: #condition to go into 'save mode'
+                if points_dist(self.pos_centroid, nodes_dict[node_name]) <= 22:                    
                         self.saved_nodes.append(node_name)                        
                         self.node_pos.append(nodes_dict[node_name])
                         print('\nTrial', self.trial_num,  ' Node', node_name,'\nTime', self.converted_time,' FPS', round(fps, 3))
@@ -420,12 +428,7 @@ class Tracker:
                         
                         if node_name != self.saved_nodes[(len(self.saved_nodes))-2]:
                                self.time_points.append([self.converted_time,node_name])
-
-        #annotate all nodes the rat has traversed
-        for i in range(0, len(self.saved_nodes)):
-            self.annotate_node(frame, point = self.node_pos[i], node = self.saved_nodes[i], t= 2) ##t=2 walked node during the trial
-        #frame annotations during recording
-        if self.record_detections:          
+          
             #savepath  = self.vid_save_path + '{}'.format('.mp4')
             cv2.putText(frame,'Trial:' + str(self.trial_num), (60,60), 
                         fontFace = FONT, fontScale = 0.75, color = (255,255,255), thickness = 1)
@@ -435,18 +438,13 @@ class Tracker:
                         fontFace = FONT, fontScale = 0.65, color = (255,255,255), thickness = 1)
             cv2.putText(frame, "Rat-head Count: " + str(self.count_head), (40,160), 
                         fontFace = FONT, fontScale = 0.65, color = (255,255,255), thickness = 1)
-        
-        if self.start:
-            cv2.putText(frame,'Next trial:' + str(self.trial_num+1), (60,60), 
-                        fontFace = FONT, fontScale = 0.75, color = (255,255,255), thickness = 1)
-            cv2.putText(frame,'Waiting start new trial...', (60,80), 
-                        fontFace = FONT, fontScale = 0.75, color = (255,255,255), thickness = 1)    
-            
-            #draw the path that the rat has traversed [centroid = head trace]
+    
+         #draw the path that the rat has traversed [centroid = head trace]
             if len(self.centroid_list) >= 2:
                 for i in range(1, len(self.centroid_list)):
                     cv2.line(frame, self.centroid_list[i], self.centroid_list[i - 1], 
-                             color = (255,98, 98), thickness = 1)
+                             color = (255,98, 98), thickness = 1)        
+ 
                                       
     #save recorded nodes to file
     def save_to_file(self, fname):
