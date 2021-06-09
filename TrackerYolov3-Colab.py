@@ -225,23 +225,27 @@ class Tracker:
         
     def CNN(self, frame):
         self.t1 = time.time()
-        ##input to the CNN - blob.shape: (1, 3, 416, 416)
+        #frame width and width to draw boxes in correct position
+        height, width, _ = frame.shape                
+        ##input to the CNN - blob.shape: (1, 3, 416, 416) 
         blob = cv2.dnn.blobFromImage(frame, 1/255, (416, 416), (0,0,0), swapRB=True, crop=False)
         self.net.setInput(blob)
-        #frame width and width to draw boxes in correct position
-        height, width, _ = frame.shape
+
         output_layers_names = self.net.getUnconnectedOutLayersNames()    
         layerOutputs = self.net.forward(output_layers_names)   ##get prediction from cnn layers
         
         boxes = []  #boxes coordinate as x,y,height, width
         confidences = [] #set to 0.7
-        class_ids = [] #researcher, rat, head       
+        class_ids = [] #researcher, rat, head 
+        centroids = []
     
         for output in layerOutputs:
           for detection in output: ##dection in frame check with pretrained darknet
               scores = detection[5:]            
               class_id = np.argmax(scores)
               confidence = scores[class_id]
+              # filter out weak detections by ensuring the predicted
+	          	# probability is greater than a minimum threshold
               if confidence > 0.7:
                  center_x = int(detection[0]*width)
                  center_y = int(detection[1]*height)
@@ -249,6 +253,9 @@ class Tracker:
                  h = int(detection[3]*height)
                  x = int(center_x - w/2)
                  y = int(center_y - h/2)
+                 box = detection[0:4] * np.array([W, H, W, H])
+                 (centerX, centerY, width, height) = box.astype("int")
+                 centroids.append((centerX, centerY))
                  boxes.append([x, y, w, h])
                  confidences.append((float(confidence)))
                  class_ids.append(class_id)
@@ -266,7 +273,7 @@ class Tracker:
             #if label == 'researcher':
              #   self.count_human += 1                              
             if label == 'rat':
-                center_rat =(x,y) # (int((x + w)/2), int((y + h)/2))
+                center_rat =centroids[i] # (int((x + w)/2), int((y + h)/2))
                 if center_rat is not None:
                     self.count_rat += 1                   
                     if self.start == True:
@@ -290,9 +297,7 @@ class Tracker:
                                              
                                                              
             if label == 'head':
-                 cX = int((x + w) / 2.0)
-                 cY = int((y + h) / 2.0)
-                 center_head=(cX, cY)                 
+                 center_head= centroids[i]                 
                  if center_head is not None:
                    self.pos_centroid = center_head
                    self.count_head += 1 
