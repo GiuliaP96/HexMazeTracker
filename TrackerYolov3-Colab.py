@@ -48,7 +48,7 @@ def convert_milli(time):
 
 def load_network(self, n):
        # load the model of yolov3-  weights files and cnn structure (.cfg config file)  
-        self.net = cv2.dnn.readNet('weights/yolov3_training_best.weights', 'tools/yolov3_training.cfg')
+        self.net = cv2.dnn.readNet('weights/yolov3_training_best.weights', 'tools/yolov3_testing.cfg')
         #set the backend target to a CUDA-enabled GPU
         self.net.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)  ##Colab or GPU only
         self.net.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
@@ -61,7 +61,8 @@ def load_session(self,  n):
         #experiment meta-data
         self.rat = input("Enter rat number: ")
         self.date = input("Enter date of trial: ")       
-        self.goal = input("Enter GOAL node of session: ")  
+        self.goal = input("Enter GOAL node of session: ") 
+        self.trial_type = input("Enter first trial type [2]-NGL [3]-ProbeTrial: ") 
         
 def load_StartNodes(self, num_trials):   
         ##session start goals
@@ -289,17 +290,27 @@ class Tracker:
                                              
                                                              
             if label == 'head':
-              if x is not None:
-                 center_head= (x,y)#int((x + w)/2), int((y + h)/2)
+                 cX = int((x + w) / 2.0)
+                 cY = int((y + h) / 2.0)
+                 center_head=(cX, cY)                 
                  if center_head is not None:
                    self.pos_centroid = center_head
                    self.count_head += 1 
                    if self.start == True: 
                           self.find_start(self.pos_centroid)                    
                    if self.record_detections:
-                     self.centroid_list.append(self.pos_centroid)                    
+                     self.centroid_list.append(self.pos_centroid)
+                     if int(self.trial_type) == 2:
+                         if self.trial_num == 1:
+                            if self.frame_time >= 600000:  
+                              print('End first trial new goal location session')
+                              self.calculate_velocity(self.time_points)
+                              self.save_to_file(self.save)                         
+                              self.count_head =0 
+                              self.record_detections = False
+                              self.start= True                              
                      ##Check if rat reached Goal location
-                     if points_dist(self.pos_centroid, self.goal_location) <= 22:                        
+                     if points_dist(self.pos_centroid, self.goal_location) <= 20:                        
                          cv2.putText(self.disp_frame, "\nGoal location reached", (30,70), 0, 1, (0,250,0), 2) 
                          print('Head end trial ', self.trial_num, ' out of ', self.num_trials, '\nCount rat', self.count_rat, ' head', self.count_head)
                          self.calculate_velocity(self.time_points)
@@ -443,7 +454,12 @@ class Tracker:
             if len(self.centroid_list) >= 2:
                 for i in range(1, len(self.centroid_list)):
                     cv2.line(frame, self.centroid_list[i], self.centroid_list[i - 1], 
-                             color = (255,98, 98), thickness = 1)        
+                             color = (255,98, 98), thickness = 1)     
+            if self.pos_centroid is not None:
+                cv2.line(frame, (self.pos_centroid[0] - 5, self.pos_centroid[1]), (self.pos_centroid[0] + 5, self.pos_centroid[1]), 
+                color = (0, 255, 0), thickness = 2)
+                cv2.line(frame, (self.pos_centroid[0], self.pos_centroid[1] - 5), (self.pos_centroid[0], self.pos_centroid[1] + 5), 
+                color = (0, 255, 0), thickness = 2)
  
                                       
     #save recorded nodes to file
