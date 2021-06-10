@@ -48,7 +48,7 @@ def convert_milli(time):
 
 def load_network(self, n):
        # load the model of yolov3-  weights files and cnn structure (.cfg config file)  
-        self.net = cv2.dnn.readNet('weights/yolov3_training_best.weights', 'tools/yolov3_testing.cfg')
+        self.net = cv2.dnn.readNet('weights/yolov3_training_best.weights', 'tools/yolov3_training.cfg')
         #set the backend target to a CUDA-enabled GPU
         self.net.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)  ##Colab or GPU only
         self.net.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
@@ -59,16 +59,16 @@ def load_network(self, n):
                    
 def load_session(self,  n):       
         #experiment meta-data
-        self.rat = input("Enter rat number: ")
-        self.date = input("Enter date of trial: ")       
-        self.goal = input("Enter GOAL node of session: ") 
-        self.trial_type = input("Enter first trial type [2]-NGL [3]-ProbeTrial: ") 
+        self.rat = input("\n>> Enter rat number: ")
+        self.date = input("\n>> Enter date of trial: ")       
+        self.goal = input("\n>> Enter GOAL node of session: ") 
+        self.trial_type = input("\n>> Enter first trial type [2]-NGL [3]-ProbeTrial: \n") 
         
 def load_StartNodes(self, num_trials):   
         ##session start goals
         self.start_nodes = []
         for i in range(int(num_trials)): ##1, sel.num
-          node = input('Enter START node of trial num {}: '.format(i+1))
+          node = input('\n> Enter START node of trial num {}: '.format(i+1))
           self.start_nodes.append(int(node))           
                         
 def define_variables(self, vp, nl, file_id, n, out):          
@@ -113,7 +113,7 @@ def define_variables(self, vp, nl, file_id, n, out):
 class Tracker:
     def __init__(self, vp, nl, file_id, out):
         '''Tracker class initialisations'''        
-        self.num_trials = input("Enter num total trials: ")        
+        self.num_trials = input("\n>> Enter num total trials: ")        
         ##set of threads to load network, input and variables
         threads = list()
         ##thread to load network
@@ -131,10 +131,13 @@ class Tracker:
             thread.join() 
         ##ask start node for each trial    
         load_StartNodes(self, self.num_trials) 
-        print('Network loaded', self.net)            
+        print('\n -Network loaded- ', self.net)            
         #find location of goal node and all start nodes
         self.start_nodes_locations = self.find_location(self.node_list, self.start_nodes, self.goal)
-        print('\nNumber of trials current session', self.num_trials, '\nGoal location node ', self.goal)   
+        print('\n ________  SUMMARY SESSION ________  ')
+        print('\nPath video file:' , self.save_video)
+        print('\nPath .log and .txt files:' , self.save)
+        print('\nTotal trials current session:', self.num_trials, '\n\nGoal location node ', self.goal)   
         for i in range(0, len(self.start_nodes)):
           print('\nStart node trial {} '.format(i+1), self.start_nodes[i], 'location', self.start_nodes_locations[i])    
         self.Start = time.time()
@@ -145,7 +148,7 @@ class Tracker:
         '''
         Frame by Frame looping of video
         '''
-        print('Starting video...\n')
+        print('\nStarting video.....\n')
         with open(self.save, 'a+') as file:
             file.write(f"Rat number: {self.rat} , Date: {self.date} \n")
   
@@ -159,8 +162,8 @@ class Tracker:
    
             #close video output and print time tracking
             if self.end_session:
-                print ('End Session in ', round(time.time() - self.Start, 2))
-                print('Session ended with ', self.trial_num ,' trials')           
+                print('\n >>>> End Session in ', convert_milli(int(round(time.time() - self.Start, 2))))
+                print('\n >>>> Session ended with ', self.trial_num ,' trials')           
                 self.cap.release()
                 self.out.release()
                 break               
@@ -199,7 +202,7 @@ class Tracker:
 
         '''             
         ##calculate coordinate rectangle in start node 
-        print( '\n' , self.converted_time, ' Next Trial', self.trial_num +1 , ' Start node', self.start_nodes[self.trial_num])       
+        print( '\n' , self.converted_time, '>>> Waiting Start Next Trial: ', self.trial_num +1 , ' Start node:', self.start_nodes[self.trial_num])       
         print('Rat position', self.pos_centroid, 'Node', self.start_nodes_locations[self.trial_num])
         node =  self.start_nodes_locations[self.trial_num]
         x = int(node[0])
@@ -209,7 +212,7 @@ class Tracker:
         cv2.rectangle(self.disp_frame, (x-w,y+h), (x+w,y-h),(0,255,0), 2) 
         if points_dist(center_rat, node) < 30: 
                        self.trial_num += 1
-                       print('\nTrial ', self.trial_num, '\nTracking start from ',center_rat, node, 'distance', round(points_dist(center_rat, node)))                      
+                       print('\n >>> New Trial Start: ', self.trial_num, '\nLocation start rat',center_rat,'node', node, 'distance at start', round(points_dist(center_rat, node)))                      
                        logger.info('Recording Trial {}'.format(self.trial_num))                        
                        self.node_pos = []
                        self.path = []
@@ -224,13 +227,12 @@ class Tracker:
                        self.start= False
         
     def CNN(self, frame):
-        self.t1 = time.time()
-        #frame width and width to draw boxes in correct position
-        height, width, _ = frame.shape                
+        self.t1 = time.time()     
         ##input to the CNN - blob.shape: (1, 3, 416, 416) 
         blob = cv2.dnn.blobFromImage(frame, 1/255, (416, 416), (0,0,0), swapRB=True, crop=False)
         self.net.setInput(blob)
-
+        #frame width and width to draw boxes in correct position
+        height, width, _ = frame.shape           
         output_layers_names = self.net.getUnconnectedOutLayersNames()    
         layerOutputs = self.net.forward(output_layers_names)   ##get prediction from cnn layers
         
@@ -253,14 +255,12 @@ class Tracker:
                  h = int(detection[3]*height)
                  x = int(center_x - w/2)
                  y = int(center_y - h/2)
-                 box = detection[0:4] * np.array([W, H, W, H])
-                 (centerX, centerY, width, height) = box.astype("int")
-                 centroids.append((centerX, centerY))
+                 centroids.append((center_x,center_y))
                  boxes.append([x, y, w, h])
                  confidences.append((float(confidence)))
                  class_ids.append(class_id)
       ##apply non-max suppression- eliminate double boxes (boxes, confidences, conf_threshold, nms_threshold)
-        indexes = cv2.dnn.NMSBoxes(boxes, confidences, 0.70, 0.2) ##keep boxes with higher confidence
+        indexes = cv2.dnn.NMSBoxes(boxes, confidences, 0.70, 0.4) ##keep boxes with higher confidence
     ##go through the detections remeainingafter filtering out the one with confidence < 0.7
         if len(indexes)>0:   ##indices box= box[i], x=box[0],y=box[1],w=[box[2],h=box[3]]
           for i in indexes.flatten():
@@ -278,11 +278,33 @@ class Tracker:
                     self.count_rat += 1                   
                     if self.start == True:
                           self.find_start(center_rat)                    
-                    if self.record_detections:             
-                      self.path.append(center_rat)       
+                    if self.record_detections:
+                      self.pos_centroid = center_rat           
+                      self.path.append(center_rat)
+		      if int(self.trial_type) == 2:
+		         if self.trial_num == 1:
+                            if self.frame_time >= 600000:  
+                              print('n\n\n >>> End first trial new goal location session')
+                              self.calculate_velocity(self.time_points)
+                              self.save_to_file(self.save)                         
+                              self.count_head =0 
+                              self.record_detections = False
+                              self.start= True 
+		      if int(self.trial_type) == 3:
+		         if self.trial_num == 1:
+                            if self.frame_time >= 120000: 
+				if points_dist(center_rat, self.goal_location) <= 20:                        
+                                   cv2.putText(self.disp_frame, "\n\n >>> Goal location reached", (30,70), 0, 1, (0,250,0), 2) 
+                                   print('\nRat end trial ', self.trial_num, ' out of ', self.num_trials, '\nCount rat', self.count_rat, ' head', self.count_head)
+                                   self.count_rat=0    
+                                   self.calculate_velocity(self.time_points)
+                                   self.save_to_file(self.save)
+                                   self.start = True
+                                   self.record_detections = False 
+				
                        ##Check if rat reached Goal location                    
-                      if points_dist(center_rat, self.goal_location) <= 22:                        
-                           cv2.putText(self.disp_frame, "Goal location reached", (30,70), 0, 1, (0,250,0), 2) 
+                      if points_dist(center_rat, self.goal_location) <= 20:                        
+                           cv2.putText(self.disp_frame, "\n\n >>> Goal location reached", (30,70), 0, 1, (0,250,0), 2) 
                            print('\nRat end trial ', self.trial_num, ' out of ', self.num_trials, '\nCount rat', self.count_rat, ' head', self.count_head)
                            self.count_rat=0    
                            self.calculate_velocity(self.time_points)
@@ -308,23 +330,34 @@ class Tracker:
                      if int(self.trial_type) == 2:
                          if self.trial_num == 1:
                             if self.frame_time >= 600000:  
-                              print('End first trial new goal location session')
+                              print('n\n\n >>> End first trial new goal location session')
                               self.calculate_velocity(self.time_points)
                               self.save_to_file(self.save)                         
                               self.count_head =0 
                               self.record_detections = False
-                              self.start= True                              
+                              self.start= True 
+		     if int(self.trial_type) == 3:
+		         if self.trial_num == 1:
+                            if self.frame_time >= 120000: 
+				if points_dist(center_rat, self.goal_location) <= 20:                        
+                                   cv2.putText(self.disp_frame, "\n\n >>> Goal location reached", (30,70), 0, 1, (0,250,0), 2) 
+                                   print('\nRat end trial ', self.trial_num, ' out of ', self.num_trials, '\nCount rat', self.count_rat, ' head', self.count_head)
+                                   self.count_rat=0    
+                                   self.calculate_velocity(self.time_points)
+                                   self.save_to_file(self.save)
+                                   self.start = True
+                                   self.record_detections = False		
                      ##Check if rat reached Goal location
                      if points_dist(self.pos_centroid, self.goal_location) <= 20:                        
-                         cv2.putText(self.disp_frame, "\nGoal location reached", (30,70), 0, 1, (0,250,0), 2) 
-                         print('Head end trial ', self.trial_num, ' out of ', self.num_trials, '\nCount rat', self.count_rat, ' head', self.count_head)
+                         cv2.putText(self.disp_frame, "n\n\n >>> Goal location reached", (30,70), 0, 1, (0,250,0), 2) 
+                         print('\n\nHead end trial ', self.trial_num, ' out of ', self.num_trials, '\nCount rat', self.count_rat, ' head', self.count_head)
                          self.calculate_velocity(self.time_points)
                          self.save_to_file(self.save)                         
                          self.count_head =0                      
                          ##Check if session is finished                                        
                          if self.trial_num == int(self.num_trials):   
                                   cv2.putText(self.disp_frame, "\nEnd Session", (30,70), 0, 1, (0,250,0), 2)                                  
-                                  print('Session ends with', self.trial_num)                                                                                                              
+                                  print('\nSession ends with', self.trial_num)                                                                                                              
                               #    self.create_heatmap()                                  
                                   self.end_session = True                       
                          else:                             
@@ -508,7 +541,7 @@ if __name__ == "__main__":
         sys.exit("Please provide path to input and output video files! See --help")
     print('\nVideo path' , args.vid_path, 'Logs output', args.output) #, 'save to ', args.output
 
-    enter = input('Enter unique file name: ')
+    enter = input('\n>> Enter unique file name: ')
     file_id = '' if not enter else enter
 
     print('#\nLite Tracker version: v2.00\n#\n')
@@ -526,14 +559,7 @@ if __name__ == "__main__":
     node_list = Path('/content/TrackerColab/node_list_new.csv').resolve()
     
     logger.info('Video Imported: {}'.format(args.vid_path))
-    print('creating log files...')
+    print('\ncreating log files...')
     
-    Tracker(vp = args.vid_path, nl = node_list, file_id = file_id, out = args.output) 
-
-
-    
-
-
-    
-            
-        
+    Tracker(vp = args.vid_path, nl = node_list, file_id = file_id, out = args.output)         
+  
