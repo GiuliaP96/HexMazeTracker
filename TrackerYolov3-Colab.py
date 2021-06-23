@@ -54,12 +54,9 @@ class Tracker:
         ##thread to load network
         cnn = threading.Thread(target=self.load_network,args=(1,))
         threads.append(cnn)
-        #thread to load session infos, date, rat number, goal location, variables and create video and .txt saving path
-        session = threading.Thread(target=self.load_session,args=(vp, nl, file_id, 1, out))      
-        threads.append(session) 
-        ##thread to enter all starting nodes of the session
-        var = threading.Thread(target=self.load_start_nodes,args=(self.num_trials,))   
-        threads.append(var)           
+        #thread to load session infos, date, rat number, goal and start locations, variables and create video and .txt saving path
+        session = threading.Thread(target=self.load_session,args=(vp, nl, file_id, 1, out, self.num_trials))      
+        threads.append(session)                  
         for thread in threads:
             thread.start()
         for thread in threads:
@@ -87,12 +84,17 @@ class Tracker:
         with open("tools/classes.txt", "r") as f:
            self.classes = f.read().splitlines()     
     
-    def load_session(self, vp, nl, file_id, n, out):       
+    def load_session(self, vp, nl, file_id, n, out, num_trials):       
         #experiment meta-data
         self.rat = input("\n>> Enter rat number: ")
         self.date = input("\n>> Enter date of trial: ")
         self.goal = input("\n>> Enter GOAL node of session: ") 
         self.trial_type = input("\n>> Enter first trial type [1]-Normal [2]-New GoaL Location [3]-Probe: ") 
+        ##session start goals
+        self.start_nodes = []
+        for i in range(int(num_trials)): ##1, sel.num
+          node = input('\n> Enter START node of trial num {}: '.format(i+1))
+          self.start_nodes.append(int(node))   
         self.node_list = str(nl)
         self.center_researcher = None
         self.cap = cv2.VideoCapture(str(vp))
@@ -128,16 +130,9 @@ class Tracker:
         #self.codec = cv2.VideoWriter_fourcc(*'XVID')    #to change format video in .avi
         self.save_video =  '{}/videos/{}_{}.mp4'.format(out, str(self.date), file_id)   #or .avi
         self.vid_fps =int(self.cap.get(cv2.CAP_PROP_FPS))
-        self.out = cv2.VideoWriter('{}'.format(self.save_video), self.codec, self.vid_fps, (1176,712))       
-   
-    def load_start_nodes(self, num_trials):   
-        ##session start goals
-        self.start_nodes = []
-        for i in range(int(num_trials)): ##1, sel.num
-          node = input('\n> Enter START node of trial num {}: '.format(i+1))
-          self.start_nodes.append(int(node))           
+        self.out = cv2.VideoWriter('{}'.format(self.save_video), self.codec, self.vid_fps, (1176,712))         
+        
           
-
     #process and display video 
     def run_vid(self):
         '''
