@@ -286,7 +286,7 @@ class Tracker:
  
             ##Get box centroid if label object is head - main object to detect, if None take centroid rat body                                                                                             
             if label == 'head':
-              if confidence > 0.9:
+              if int(confidence) > 0.9:
                  self.Rat = centroids[i]                 
                  if self.Rat is not None:                   
                   ##Check researcher proximity before start new trial [avoid start if rat walked in start node soon after it reached goal location]
