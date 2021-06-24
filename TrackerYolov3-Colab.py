@@ -244,7 +244,7 @@ class Tracker:
               confidence = scores[class_id]
               # filter out weak detections by ensuring the predicted
               # probability is greater than a minimum threshold
-              if confidence > 0.6:
+              if confidence > 0.7:
                  center_x = int(detection[0]*width)
                  center_y = int(detection[1]*height)
                  w = int(detection[2]*width)
@@ -281,7 +281,7 @@ class Tracker:
  
             ##Get box centroid if label object is head - main object to detect, if None take centroid rat body                                                                                             
             if label == 'head':
-              if int(confidence) > 0.9:
+              if float(confidence) > 0.9:
                  self.Rat = centroids[i]                 
                  if self.Rat is not None:                   
                   ##Check researcher proximity before start new trial [avoid start if rat walked in start node soon after it reached goal location]
