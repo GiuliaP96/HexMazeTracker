@@ -106,8 +106,7 @@ class Tracker:
         self.minutes = None
         self.disp_frame = None
         self.pos_centroid = None #keep centroids rat 
-        self.Rat = None ##keep centroid of rat head - main
-        self.Rat_body = None ##keep centroid rat body
+        self.Rat = None ##keep centroid of rat 
         self.frame_rate = 0      ##
         self.trial_num = 0        
         self.count_rat=0
@@ -216,7 +215,8 @@ class Tracker:
                        self.saved_nodes = []        
                        self.node_id = []   ##node num
                        self.saved_velocities=[]
-                       self.centroid_list.append(center_rat) 
+                       self.pos_centroid = node
+                       self.centroid_list.append(self.pos_centroid) 
                        self.check = False  #make sure proximitycheck set to false for next start node
                        self.record_detections = True  
                        self.start = False
@@ -257,7 +257,7 @@ class Tracker:
                  class_ids.append(class_id)
          ##apply non-max suppression- eliminate double boxes 
          ##(boxes, confidences, conf_threshold, nms_threshold)
-        indexes = cv2.dnn.NMSBoxes(boxes, confidences, 0.7, 0.3) ##keep boxes with higher confidence
+        indexes = cv2.dnn.NMSBoxes(boxes, confidences, 0.75, 0.3) ##keep boxes with higher confidence
         ##go through the detections after filtering out the one with confidence < 0.7
         if len(indexes)>0:   ##indices box= box[i], x=box[0],y=box[1],w=[box[2],h=box[3]]
           for i in indexes.flatten(): ##Return a copy of the array collapsed into one dimension
@@ -275,13 +275,12 @@ class Tracker:
                     self.center_researcher = centroids[i]
                     print('\n Checking proximity...')
                     if self.center_researcher is not None and self.Rat is not None:
-                            if points_dist(self.Rat , self.center_researcher) <= 250:                          
+                            if points_dist(self.Rat , self.center_researcher) <= 400:                          
                                 self.start = True 
                                 print('\n\n >>> Proximity Checked > start new trial')   
  
             ##Get box centroid if label object is head - main object to detect, if None take centroid rat body                                                                                             
             if label == 'head':
-              if float(confidence) > 0.9:
                  self.Rat = centroids[i]                 
                  if self.Rat is not None:                   
                   ##Check researcher proximity before start new trial [avoid start if rat walked in start node soon after it reached goal location]
@@ -295,19 +294,24 @@ class Tracker:
   
          ##Get box centroid if label object is rat [body + tail] if nohead etected
             if label == 'rat':
-                if not self.Rat: #get centroid of rat body only if rat head is not detected
-                    self.Rat_body = centroids[i] # center of bounding box (x,y) 
-                    if self.Rat_body is not None:  
+                if self.Rat is None: #get centroid of rat body only if rat head is not detected
+                    self.Rat = centroids[i] # center of bounding box (x,y) 
+                    if self.Rat is not None:  
                         if self.start == True:
-                          self.find_start(self.Rat_body)       
+                          self.find_start(self.Rat)       
                         if self.record_detections:
                             self.count_rat += 1
-                            self.object_detection(rat = self.Rat_body, frame = frame)
+                            self.object_detection(rat = self.Rat, frame = frame)
                                                                                                                           
     def object_detection(self, rat, frame): 
-       self.pos_centroid = rat
+       if self.pos_centroid is not None:
+          if points_dist(self.pos_centroid, rat) < 50:
+             self.pos_centroid = rat        
+          else:
+             self.pos_centroid = self.pos_centroid
+       else:
+          self.pos_centroid = rat    
        self.centroid_list.append(self.pos_centroid) 
-    
        ##New Goal location trial: first trial 10 minutes long
        if self.NGL:
            self.minutes = self.timer(start = self.start_time)
@@ -316,7 +320,7 @@ class Tracker:
                            fontScale = 0.75, color = (0,255,0), thickness = 1) 
                print('n\n\n >>> End New Goal Location Trial - timeout', self.trial_num, ' out of ', self.num_trials)
                self.end_trial(frame)
-               self.NGL = False
+               self.NGL = False            
                       
        ##Probe trial: look for goal locatin reached after first 2 minutes
        if self.probe:
