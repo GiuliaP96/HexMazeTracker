@@ -305,7 +305,7 @@ class Tracker:
                                                                                                                           
     def object_detection(self, rat, frame): 
        if self.pos_centroid is not None:
-          if points_dist(self.pos_centroid, rat) < 50:
+          if points_dist(self.pos_centroid, rat) < 70:
              self.pos_centroid = rat        
           else:
              self.pos_centroid = self.pos_centroid
@@ -326,7 +326,7 @@ class Tracker:
        if self.probe:
            self.minutes = self.timer(start = self.start_time)
            if int(self.minutes) >= 2: 
-               if points_dist(self.pos_centroid, self.goal_location) <= 20:  
+               if points_dist(self.pos_centroid, self.goal_location) <= 30:  
                    cv2.putText(self.disp_frame, "End Probe Trial", (60,100), fontFace = FONT,
                                fontScale = 0.75, color = (0,255,0), thickness = 1) 
                    print('\n\n >>> End Probe trial', self.trial_num, ' out of ', self.num_trials, '\nCount rat', self.count_rat, ' head', self.count_head)
