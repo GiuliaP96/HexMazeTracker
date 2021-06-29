@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+      # -*- coding: utf-8 -*-
 '''
 Title: Tracker
 
@@ -46,7 +46,7 @@ def convert_milli(time):
     return f'{int(hr):02d}:{int(minute):02d}:{sec:.3f}'
 
 class Tracker:
-    def __init__(self, vp, nl, file_id, out):
+    def __init__(self, vp, nl, out):
         '''Tracker class initialisations'''        
         self.num_trials = input("\n>> Enter num total trials: ")        
         ##set of threads to load network, input and variables
@@ -55,7 +55,7 @@ class Tracker:
         cnn = threading.Thread(target=self.load_network,args=(1,))
         threads.append(cnn)
         #thread to load session infos, date, rat number, goal and start locations, variables and create video and .txt saving path
-        session = threading.Thread(target=self.load_session,args=(vp, nl, file_id, 1, out, self.num_trials))      
+        session = threading.Thread(target=self.load_session,args=(vp, nl, 1, out, self.num_trials))      
         threads.append(session)                  
         for thread in threads:
             thread.start()
@@ -70,7 +70,20 @@ class Tracker:
         print('\nTotal trials current session:', self.num_trials, '\n\nGoal location node ', self.goal)   
         for i in range(0, len(self.start_nodes)):
           print('\nStart node trial {} '.format(i+1), self.start_nodes[i], 'location', self.start_nodes_locations[i])    
-        self.Start = time.time()
+        
+        #logger intitialisations
+        self.logger = logging.getLogger('')
+        self.logger.setLevel(logging.INFO)
+
+        logfile_name = '{}/logs/log_{}_{}.log'.format(out, str(self.date), 'Rat'+self.rat)
+
+        fh = logging.FileHandler(str(logfile_name))
+        formatter = logging.Formatter('%(levelname)s : %(message)s')
+        fh.setFormatter(formatter)
+        self.logger.addHandler(fh) 
+        self.logger.info('Video Imported: {}'.format(vp))
+        print('\ncreating log files...')
+        
         self.run_vid()
    
     def load_network(self, n):
@@ -84,16 +97,16 @@ class Tracker:
         with open("tools/classes.txt", "r") as f:
            self.classes = f.read().splitlines()     
     
-    def load_session(self, vp, nl, file_id, n, out, num_trials):       
+    def load_session(self, vp, nl, n, out, num_trials):       
         #experiment meta-data
         self.rat = input("\n>> Enter rat number: ")
         self.date = input("\n>> Enter date of trial: ")
-        self.goal = input("\n>> Enter GOAL node of session: ") 
+        self.goal = input("\n>> Enter session GOAL node(number): ") 
         self.trial_type = input("\n>> Enter first trial type [1]-Normal [2]-New GoaL Location [3]-Probe: ") 
         ##session start goals
         self.start_nodes = []
         for i in range(int(num_trials)): ##1, sel.num
-          node = input('\n> Enter START node of trial num {}: '.format(i+1))
+          node = input('\n> Enter START node(number) of trial num{}: '.format(i+1))
           self.start_nodes.append(int(node))   
         self.node_list = str(nl)
         self.center_researcher = None
@@ -123,11 +136,11 @@ class Tracker:
         self.saved_velocities=[]
         self.summary_trial=[]    
         
-        self.save = '{}/logs/{}_{}'.format(out, str(self.date), file_id +'.txt')  # str(date.today())
+        self.save = '{}/logs/{}_{}'.format(out, str(self.date), 'Rat'+self.rat +'.txt')  # str(date.today())
         ##set output video saved in folder video/'date_unique file name'.mp4
         self.codec = cv2.VideoWriter_fourcc(*'mp4v')   
         #self.codec = cv2.VideoWriter_fourcc(*'XVID')    #to change format video in .avi
-        self.save_video =  '{}/videos/{}_{}.mp4'.format(out, str(self.date), file_id)   #or .avi
+        self.save_video =  '{}/videos/{}_{}.mp4'.format(out, str(self.date), 'Rat' + self.rat)   #or .avi
         self.vid_fps =int(self.cap.get(cv2.CAP_PROP_FPS))
         self.out = cv2.VideoWriter('{}'.format(self.save_video), self.codec, self.vid_fps, (1176,712))         
         
@@ -162,14 +175,13 @@ class Tracker:
             if self.record_detections:
                 if self.pos_centroid is not None:
                     if self.saved_nodes:
-                        logger.info(f'{self.converted_time} : The rat position is: {self.pos_centroid} @ {self.saved_nodes[-1]}')                  
+                        self.logger.info(f'{self.converted_time} : The rat position is: {self.pos_centroid} @ {self.saved_nodes[-1]}')                  
                     else:
-                        logger.info(f'{self.converted_time} : The rat position is: {self.pos_centroid}') #pos_centroid
+                        self.logger.info(f'{self.converted_time} : The rat position is: {self.pos_centroid}') #pos_centroid
  
             #close video output and print time tracking
             if self.end_session:
-                print('\n >>>> End Session in ', convert_milli(int(round(time.time() - self.Start, 2))))
-                print('\n >>>> Session ended with ', self.trial_num ,' trials')           
+                print('\n >>>> Session ended with ', self.trial_num ,' trials out of', self.num_trials)           
                 self.cap.release()
                 self.out.release()
                 break               
@@ -196,12 +208,12 @@ class Tracker:
         w= 15 
         h=  13                  
         cv2.rectangle(self.disp_frame, (x-w,y+h), (x+w,y-h),(0,255,0), 2) 
-        if points_dist(center_rat, node) < 30: 
+        if points_dist(center_rat, node) < 25: 
          # if self.center_researcher is not None: 
              #if points_dist(node, self.center_researcher) > 40:
                        self.trial_num += 1
                        print('\n >>> New Trial Start: ', self.trial_num, '\nLocation start rat',center_rat,'node', node, 'distance at start', round(points_dist(center_rat, node)))                      
-                       logger.info('Recording Trial {}'.format(self.trial_num))   
+                       self.logger.info('Recording Trial {}'.format(self.trial_num))   
                        #if self.trial_type == 2 or self.trial_type == 3 and self.trial_num == 1:
                        self.start_time = (self.frame_time/ (1000*60)) % 60
                        if int(self.trial_type) == 2 and self.trial_num == 1:
@@ -312,27 +324,6 @@ class Tracker:
        else:
           self.pos_centroid = rat    
        self.centroid_list.append(self.pos_centroid) 
-       ##New Goal location trial: first trial 10 minutes long
-       if self.NGL:
-           self.minutes = self.timer(start = self.start_time)
-           if int(self.minutes) == 10:
-               cv2.putText(self.disp_frame, "End NGL trial",(60,100), fontFace = FONT,
-                           fontScale = 0.75, color = (0,255,0), thickness = 1) 
-               print('n\n\n >>> End New Goal Location Trial - timeout', self.trial_num, ' out of ', self.num_trials)
-               self.end_trial(frame)
-               self.NGL = False            
-                      
-       ##Probe trial: look for goal locatin reached after first 2 minutes
-       if self.probe:
-           self.minutes = self.timer(start = self.start_time)
-           if int(self.minutes) >= 2: 
-               if points_dist(self.pos_centroid, self.goal_location) <= 30:  
-                   cv2.putText(self.disp_frame, "End Probe Trial", (60,100), fontFace = FONT,
-                               fontScale = 0.75, color = (0,255,0), thickness = 1) 
-                   print('\n\n >>> End Probe trial', self.trial_num, ' out of ', self.num_trials, '\nCount rat', self.count_rat, ' head', self.count_head)
-                   self.end_trial(frame) 
-                   self.probe = False
-      
        ##Normal training - Check if rat reached Goal location  
        if not self.probe and not self.NGL:
            if points_dist(self.pos_centroid, self.goal_location) <= 20:
@@ -344,9 +335,34 @@ class Tracker:
                if self.trial_num == int(self.num_trials):
                    print('\n >>>>>>  Session ends with', self.trial_num, ' trials')
                    self.end_session = True   
+       
+       ##New Goal location trial: first trial 10 minutes long
+       if self.NGL:
+           self.minutes = self.timer(start = self.start_time)
+           if int(self.minutes)  >= 10:
+               cv2.putText(self.disp_frame, "End NGL trial",(60,100), fontFace = FONT,
+                           fontScale = 0.75, color = (0,255,0), thickness = 1) 
+               print('n\n\n >>> End New Goal Location Trial - timeout', self.trial_num, ' out of ', self.num_trials)
+               self.NGL = False
+               self.end_trial(frame)                          
+                      
+       ##Probe trial: look for goal locatin reached after first 2 minutes
+       if self.probe:
+           self.minutes = self.timer(start = self.start_time)
+           if int(self.minutes) >= 2: 
+               if points_dist(self.pos_centroid, self.goal_location) <= 25:  
+                   cv2.putText(self.disp_frame, "End Probe Trial", (60,100), fontFace = FONT,
+                               fontScale = 0.75, color = (0,255,0), thickness = 1) 
+                   print('\n\n >>> End Probe trial', self.trial_num, ' out of ', self.num_trials, '\nCount rat', self.count_rat, ' head', self.count_head)                   
+                   self.probe = False
+                   self.end_trial(frame) 
+                         
+
     
     def end_trial(self, frame): 
       #make sure last node is saved and written to file before self.record_detections = False
+      self.pos_centroid = self.goal_location
+      self.centroid_list.append(self.pos_centroid) 
       self.annotate_frame(frame) 
       ##if rat reached goal node calculate velocities and save to file
       self.count_rat = 0 
@@ -369,7 +385,7 @@ class Tracker:
            ('223', '404'):1.69,
            ('324', '401'):0.60,
            ('305', '220'):0.60}
-      if len(time_points) > 3:
+      if len(time_points) > 2:
             lenght=0
             self.first_node= time_points[0][1]            
             format = '%H:%M:%S.%f' 
@@ -455,9 +471,7 @@ class Tracker:
             
             self.annotate_node(frame, point = self.start_nodes_locations[self.trial_num], node = self.start_nodes[self.trial_num] , t= 1)
 
-        #annotate all nodes the rat has traversed
-        for i in range(0, len(self.saved_nodes)):
-            self.annotate_node(frame, point = self.node_pos[i], node = self.saved_nodes[i], t= 2) ##t=2 walked node during the trial
+
         #frame annotations during recording
         if self.record_detections:          
         #if the centroid position of rat is within 22 pixels of any node
@@ -474,7 +488,7 @@ class Tracker:
                         
                         if node_name != self.saved_nodes[(len(self.saved_nodes))-2]:
                                self.time_points.append([self.converted_time,node_name])
-          
+                                           
             #savepath  = self.vid_save_path + '{}'.format('.mp4')
             cv2.putText(frame,'Trial:' + str(self.trial_num), (60,60), 
                         fontFace = FONT, fontScale = 0.75, color = (255,255,255), thickness = 1)
@@ -484,18 +498,23 @@ class Tracker:
                         fontFace = FONT, fontScale = 0.65, color = (255,255,255), thickness = 1)
             cv2.putText(frame, "Rat-head Count: " + str(self.count_head), (40,160), 
                         fontFace = FONT, fontScale = 0.65, color = (255,255,255), thickness = 1)
+        
     
          #draw the path that the rat has traversed [centroid = head trace]
             if len(self.centroid_list) >= 2:
                 for i in range(1, len(self.centroid_list)):
                     cv2.line(frame, self.centroid_list[i], self.centroid_list[i - 1], 
-                             color = (255,98, 98), thickness = 2)     
+                             color = (255,98, 98), thickness = 1)     
 
             if self.pos_centroid is not None:
                 cv2.line(frame, (self.pos_centroid[0] - 5, self.pos_centroid[1]), (self.pos_centroid[0] + 5, self.pos_centroid[1]), 
                 color = (0, 255, 0), thickness = 2)
                 cv2.line(frame, (self.pos_centroid[0], self.pos_centroid[1] - 5), (self.pos_centroid[0], self.pos_centroid[1] + 5), 
                 color = (0, 255, 0), thickness = 2)
+       
+        #annotate all nodes the rat has traversed
+        for i in range(0, len(self.saved_nodes)):
+            self.annotate_node(frame, point = self.node_pos[i], node = self.saved_nodes[i], t= 2) ##t=2 walked node during the trial
  
                                       
     #save recorded nodes to file
@@ -540,24 +559,9 @@ if __name__ == "__main__":
         sys.exit("Please provide path to input and output video files! See --help")
     print('\nVideo path' , args.vid_path, 'Logs output', args.output) #, 'save to ', args.output
 
-    enter = input('\n>> Enter unique file name: ')
-    file_id = '' if not enter else enter
-
-    print('#\nLite Tracker version: v2.00\n#\n')
-    #logger intitialisations
-    logger = logging.getLogger('')
-    logger.setLevel(logging.INFO)
-
-    logfile_name = '{}/logs/log_{}_{}.log'.format(args.output, str(today), file_id)
-
-    fh = logging.FileHandler(str(logfile_name))
-    formatter = logging.Formatter('%(levelname)s : %(message)s')
-    fh.setFormatter(formatter)
-    logger.addHandler(fh) 
-
+   # enter = input('\n>> Enter unique file name: ')
+   # file_id = '' if not enter else enter
     node_list = Path('/content/TrackerColab/node_list_new.csv').resolve() 
+    print('\n\nTracker version: v2.00\n\n')
     
-    logger.info('Video Imported: {}'.format(args.vid_path))
-    print('\ncreating log files...')
-    
-    Tracker(vp = args.vid_path, nl = node_list, file_id = file_id, out = args.output)       
+    Tracker(vp = args.vid_path, nl = node_list, out = args.output)       
