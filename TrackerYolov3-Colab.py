@@ -101,12 +101,12 @@ class Tracker:
         #experiment meta-data
         self.rat = input("\n>> Enter rat number: ")
         self.date = input("\n>> Enter date of trial: ")
-        self.goal = input("\n>> Enter session GOAL node(number): ") 
+        self.goal = input("\n>> Enter session GOAL node (num): ") 
         self.trial_type = input("\n>> Enter first trial type [1]-Normal [2]-New GoaL Location [3]-Probe: ") 
         ##session start goals
         self.start_nodes = []
         for i in range(int(num_trials)): ##1, sel.num
-          node = input('\n> Enter START node(number) of trial num{}: '.format(i+1))
+          node = input('\n> Enter START node(num) of trial {}: '.format(i+1))
           self.start_nodes.append(int(node))   
         self.node_list = str(nl)
         self.center_researcher = None
@@ -269,7 +269,7 @@ class Tracker:
                  class_ids.append(class_id)
          ##apply non-max suppression- eliminate double boxes 
          ##(boxes, confidences, conf_threshold, nms_threshold)
-        indexes = cv2.dnn.NMSBoxes(boxes, confidences, 0.75, 0.3) ##keep boxes with higher confidence
+        indexes = cv2.dnn.NMSBoxes(boxes, confidences, 0.70, 0.3) ##keep boxes with higher confidence
         ##go through the detections after filtering out the one with confidence < 0.7
         if len(indexes)>0:   ##indices box= box[i], x=box[0],y=box[1],w=[box[2],h=box[3]]
           for i in indexes.flatten(): ##Return a copy of the array collapsed into one dimension
@@ -287,7 +287,7 @@ class Tracker:
                     self.center_researcher = centroids[i]
                     print('\n Checking proximity...')
                     if self.center_researcher is not None and self.Rat is not None:
-                            if points_dist(self.Rat , self.center_researcher) <= 400:                          
+                            if points_dist(self.Rat , self.center_researcher) <= 600:                          
                                 self.start = True 
                                 print('\n\n >>> Proximity Checked > start new trial')   
  
