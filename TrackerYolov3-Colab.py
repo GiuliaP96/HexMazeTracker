@@ -102,12 +102,17 @@ class Tracker:
         self.rat = input("\n>> Enter rat number: ")
         self.date = input("\n>> Enter date of trial: ")
         self.goal = input("\n>> Enter session GOAL node (num): ") 
-        self.trial_type = input("\n>> Enter first trial type [1]-Normal [2]-New GoaL Location [3]-Probe: ") 
+        self.trial_type = input("\n>> Enter first trial type [1]-Normal [2]-New GoaL Location [3]-Probe [4]-Special(Ephys-personalizable session): ") 
+        self.types = []
         ##session start goals
         self.start_nodes = []
         for i in range(int(num_trials)): ##1, sel.num
           node = input('\n> Enter START node(num) of trial {}: '.format(i+1))
-          self.start_nodes.append(int(node))   
+          self.start_nodes.append(int(node))  
+          ##personiliziable session
+          if self.trial_type== '4':
+              trial_type = input('\n> Enter type of trial num{} [1]-Normal trial [2]-10 min wait trial[type 2,4 or 5], [3]-PT: '.format(i+1))
+              self.types.append(int(trial_type))
         self.node_list = str(nl)
         self.center_researcher = None
         self.cap = cv2.VideoCapture(str(vp))
@@ -156,7 +161,9 @@ class Tracker:
   
         while True:         
             ret, self.frame = self.cap.read()
-
+            if not ret:
+                    self.cap.release()
+                    self.out.release()
             self.frame_time = self.cap.get(cv2.CAP_PROP_POS_MSEC)
             self.frame_rate = self.cap.get(cv2.CAP_PROP_FPS)
             self.frame_count=  self.cap.get(cv2.CAP_PROP_FRAME_COUNT)
@@ -189,9 +196,11 @@ class Tracker:
            # if key == ord('q'):
            #    print('Session ended with ', self.trial_num ,' trials')
            #    print('#Program ended by user')
-           #   break        
+           #   break    
+       
         self.cap.release()
         self.out.release()
+      
       #  cv2.destroyAllWindows()  ##Uncomment if not in cv2 ver 4.5.2
 
     def find_start(self, center_rat):
@@ -216,6 +225,11 @@ class Tracker:
                        self.logger.info('Recording Trial {}'.format(self.trial_num))   
                        #if self.trial_type == 2 or self.trial_type == 3 and self.trial_num == 1:
                        self.start_time = (self.frame_time/ (1000*60)) % 60
+                       if self.trial_type== '4':
+                          if self.types[self.trial_num -1] == 2: 
+                              self.NGL = True
+                          if self.types[self.trial_num -1] == 3:  
+                              self.probe = True
                        if int(self.trial_type) == 2 and self.trial_num == 1:
                            self.NGL = True
                        if int(self.trial_type) == 3 and self.trial_num == 1:
@@ -229,9 +243,9 @@ class Tracker:
                        self.saved_velocities=[]
                        self.pos_centroid = node
                        self.centroid_list.append(self.pos_centroid) 
-                       self.check = False  #make sure proximitycheck set to false for next start node
+                       self.check = False  
                        self.record_detections = True  
-                       self.start = False
+                       self.start = False #make sure proximitycheck set to false for next start node
         
     def CNN(self, frame):
         self.t1 = time.time()     
@@ -345,7 +359,10 @@ class Tracker:
                print('n\n\n >>> End New Goal Location Trial - timeout', self.trial_num, ' out of ', self.num_trials)
                self.NGL = False
                self.end_trial(frame)                          
-                      
+               ##Check if session is finished
+               if self.trial_num == int(self.num_trials):
+                   print('\n >>>>>>  Session ends with', self.trial_num, ' trials')
+                   self.end_session = True                         
        ##Probe trial: look for goal locatin reached after first 2 minutes
        if self.probe:
            self.minutes = self.timer(start = self.start_time)
@@ -356,7 +373,10 @@ class Tracker:
                    print('\n\n >>> End Probe trial', self.trial_num, ' out of ', self.num_trials, '\nCount rat', self.count_rat, ' head', self.count_head)                   
                    self.probe = False
                    self.end_trial(frame) 
-                         
+                   ##Check if session is finished
+                   if self.trial_num == int(self.num_trials):
+                       print('\n >>>>>>  Session ends with', self.trial_num, ' trials')
+                       self.end_session = True                            
 
     
     def end_trial(self, frame): 
@@ -368,13 +388,16 @@ class Tracker:
       self.count_rat = 0 
       self.count_head = 0
       self.calculate_velocity(self.time_points)
-      self.save_to_file(self.save)                             
+      self.save_to_file(self.save)
+      self.start = False                             
       self.record_detections = False       
     
     #Timer for new goal location and probe trials
     def timer(self, start):
         end = (self.frame_time/ (1000*60)) % 60
         duration = end - start       
+        if duration < 0:
+            duration = duration + 60
         print('Timer:' , round(duration, 2),  'minutes')     
         return int(duration)      
      
