@@ -62,7 +62,7 @@ class Tracker:
             thread.join() 
         print('\n -Network loaded- ', self.net)            
         #find location of goal node and all start nodes
-        self.start_nodes_locations = self.find_location(self.node_list, self.start_nodes, self.goal)
+        self.start_nodes_locations = self.find_location(nl, self.start_nodes, self.goal)
         print('\n  ________  SUMMARY SESSION  ________  ')
         print('\nPath video file:' , self.save_video)
         print('\nPath .log and .txt files:' , self.save)
@@ -105,7 +105,7 @@ class Tracker:
         self.trial_type = input("\n>> Enter first trial type [1]-Normal [2]-New GoaL Location [3]-Probe [4]-Special(Ephys): ") 
         ##session start goals
         self.start_nodes = []
-        for i in range(int(num_trials)): ##1, sel.num
+        for i in range(int(self.num_trials)): ##1, sel.num
           node = input('\n> Enter START node(num) of trial {}: '.format(i+1))
           self.start_nodes.append(int(node))  
         self.node_list = str(nl)
@@ -184,17 +184,16 @@ class Tracker:
  
             #close video output and print time tracking
             if self.end_session:
-                print('\n >>>> Session ended with ', self.trial_num ,' trials out of', self.num_trials)           
-                self.cap.release()
-                self.out.release()
-                break               
+                print('\n >>>> Session ended with ', self.trial_num ,' trials out of', self.num_trials)  
+                if not ret: ##wait till end of the video
+                  self.cap.release()
+                  self.out.release()
+                  break               
            # key = cv2.waitKey(1) & 0xFF
            # if key == ord('q'):
            #    print('Session ended with ', self.trial_num ,' trials')
            #    print('#Program ended by user')
-           #   break           
-        self.cap.release()
-        self.out.release()      
+           #   break               
       #  cv2.destroyAllWindows()  ##Uncomment if not in cv2 ver 4.5.2
 
     def find_start(self, center_rat):
@@ -503,7 +502,6 @@ class Tracker:
                         fontFace = FONT, fontScale = 0.75, color = (255,255,255), thickness = 1)    
             
             self.annotate_node(frame, point = self.start_nodes_locations[self.trial_num], node = self.start_nodes[self.trial_num] , t= 1)
-
 
         #frame annotations during recording
         if self.record_detections:          
