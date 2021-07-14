@@ -102,17 +102,12 @@ class Tracker:
         self.rat = input("\n>> Enter rat number: ")
         self.date = input("\n>> Enter date of trial: ")
         self.goal = input("\n>> Enter session GOAL node (num): ") 
-        self.trial_type = input("\n>> Enter first trial type [1]-Normal [2]-New GoaL Location [3]-Probe [4]-Special(Ephys-personalizable session): ") 
-        self.types = []
+        self.trial_type = input("\n>> Enter first trial type [1]-Normal [2]-New GoaL Location [3]-Probe [4]-Special(Ephys): ") 
         ##session start goals
         self.start_nodes = []
         for i in range(int(num_trials)): ##1, sel.num
           node = input('\n> Enter START node(num) of trial {}: '.format(i+1))
           self.start_nodes.append(int(node))  
-          ##personiliziable session
-          if self.trial_type== '4':
-              trial_type = input('\n> Enter type of trial num{} [1]-Normal trial [2]-10 min wait trial[type 2,4 or 5], [3]-PT: '.format(i+1))
-              self.types.append(int(trial_type))
         self.node_list = str(nl)
         self.center_researcher = None
         self.cap = cv2.VideoCapture(str(vp))
@@ -121,6 +116,7 @@ class Tracker:
         self.frame = None
         self.record_detections = False ##True to save nodes
         self.frame_count = None
+        self.special_start = False ##Ephys training to start timer 
         self.minutes = None
         self.disp_frame = None
         self.pos_centroid = None #keep centroids rat 
@@ -196,11 +192,9 @@ class Tracker:
            # if key == ord('q'):
            #    print('Session ended with ', self.trial_num ,' trials')
            #    print('#Program ended by user')
-           #   break    
-       
+           #   break           
         self.cap.release()
-        self.out.release()
-      
+        self.out.release()      
       #  cv2.destroyAllWindows()  ##Uncomment if not in cv2 ver 4.5.2
 
     def find_start(self, center_rat):
@@ -222,18 +216,17 @@ class Tracker:
              #if points_dist(node, self.center_researcher) > 40:
                        self.trial_num += 1
                        print('\n >>> New Trial Start: ', self.trial_num, '\nLocation start rat',center_rat,'node', node, 'distance at start', round(points_dist(center_rat, node)))                      
-                       self.logger.info('Recording Trial {}'.format(self.trial_num))   
-                       #if self.trial_type == 2 or self.trial_type == 3 and self.trial_num == 1:
-                       self.start_time = (self.frame_time/ (1000*60)) % 60
-                       if self.trial_type== '4':
-                          if self.types[self.trial_num -1] == 2: 
-                              self.NGL = True
-                          if self.types[self.trial_num -1] == 3:  
-                              self.probe = True
-                       if int(self.trial_type) == 2 and self.trial_num == 1:
-                           self.NGL = True
-                       if int(self.trial_type) == 3 and self.trial_num == 1:
-                           self.probe = True
+                       self.logger.info('Recording Trial {}'.format(self.trial_num))                         
+                       ##Ephys, probe and NGL special trials types - start time to run the timer
+                       if int(self.trial_type) != 1 and self.trial_num == 1:
+                            self.start_time = (self.frame_time/ (1000*60)) % 60
+                            if int(self.trial_type) == 3:
+                                self.probe = True 
+                            else:
+                                self.NGL = True
+                       if self.special_start:
+                           self.start_time = (self.frame_time/ (1000*60)) % 60
+                           self.special_start = False
                        self.node_pos = []
                        self.centroid_list = []
                        self.time_points=[]
@@ -338,8 +331,9 @@ class Tracker:
        else:
           self.pos_centroid = rat    
        self.centroid_list.append(self.pos_centroid) 
+       
        ##Normal training - Check if rat reached Goal location  
-       if not self.probe and not self.NGL:
+       if not self.probe and not self.NGL:                     
            if points_dist(self.pos_centroid, self.goal_location) <= 20:
                cv2.putText(self.disp_frame, "Goal location reached", (60,100), fontFace = FONT,
                                 fontScale = 0.75, color = (0,255,0), thickness = 1)
@@ -348,8 +342,17 @@ class Tracker:
                ##Check if session is finished
                if self.trial_num == int(self.num_trials):
                    print('\n >>>>>>  Session ends with', self.trial_num, ' trials')
-                   self.end_session = True   
-       
+                   self.end_session = True 
+               ##Ephys training - normal trials end after 15 minutes    
+               if self.trial_type== '4':
+                  self.minutes = self.timer(start = self.start_time)                     
+                  if int(self.minutes)  >= 15:
+                      cv2.putText(self.disp_frame, "End 15 minutes normal training",(60,100), fontFace = FONT,
+                           fontScale = 0.75, color = (0,255,0), thickness = 1) 
+                      print('n\n\n >>> End Normal training trial - 15 minutes passed', self.trial_num, ' out of ', self.num_trials)
+                      self.special_start = True ##start a new timer for next NGL trial
+                      self.NGL = True
+                      
        ##New Goal location trial: first trial 10 minutes long
        if self.NGL:
            self.minutes = self.timer(start = self.start_time)
@@ -362,7 +365,11 @@ class Tracker:
                ##Check if session is finished
                if self.trial_num == int(self.num_trials):
                    print('\n >>>>>>  Session ends with', self.trial_num, ' trials')
-                   self.end_session = True                         
+                   self.end_session = True    
+               ##Special training ephys - start timer for next 15 miutes of normal training 
+               if int(self.trial_type) == 4:
+                   self.special_start = True
+                                      
        ##Probe trial: look for goal locatin reached after first 2 minutes
        if self.probe:
            self.minutes = self.timer(start = self.start_time)
