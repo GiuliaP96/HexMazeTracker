@@ -47,15 +47,14 @@ def convert_milli(time):
 
 class Tracker:
     def __init__(self, vp, nl, out):
-        '''Tracker class initialisations'''        
-        self.num_trials = input("\n>> Enter num total trials: ")        
+        '''Tracker class initialisations'''                      
         ##set of threads to load network, input and variables
         threads = list()
         ##thread to load network
         cnn = threading.Thread(target=self.load_network,args=(1,))
         threads.append(cnn)
         #thread to load session infos, date, rat number, goal and start locations, variables and create video and .txt saving path
-        session = threading.Thread(target=self.load_session,args=(vp, nl, 1, out, self.num_trials))      
+        session = threading.Thread(target=self.load_session,args=(vp, nl, 1, out))      
         threads.append(session)                  
         for thread in threads:
             thread.start()
@@ -97,10 +96,11 @@ class Tracker:
         with open("tools/classes.txt", "r") as f:
            self.classes = f.read().splitlines()     
     
-    def load_session(self, vp, nl, n, out, num_trials):       
+    def load_session(self, vp, nl, n, out):       
         #experiment meta-data
         self.rat = input("\n>> Enter rat number: ")
         self.date = input("\n>> Enter date of trial: ")
+        self.num_trials = input("\n>> Enter num total trials: ")  
         self.goal = input("\n>> Enter session GOAL node (num): ") 
         self.trial_type = input("\n>> Enter first trial type [1]-Normal [2]-New GoaL Location [3]-Probe [4]-Special(Ephys): ") 
         ##session start goals
@@ -227,6 +227,9 @@ class Tracker:
                        if self.special_start:
                            self.start_time = (self.frame_time/ (1000*60)) % 60
                            self.special_start = False
+                       if int(self.trial_type) == 4 and self.trial_num == self.num_trials:
+                           self.start_time = (self.frame_time/ (1000*60)) % 60
+                           self.NGL = True
                        self.node_pos = []
                        self.centroid_list = []
                        self.time_points=[]
