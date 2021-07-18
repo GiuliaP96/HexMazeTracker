@@ -1,3 +1,4 @@
+
       # -*- coding: utf-8 -*-
 '''
 Title: Tracker
@@ -20,6 +21,9 @@ from pathlib import Path
 from collections import deque
 from tools import mask
 import cv2
+import onnxruntime
+
+
 #import matplotlib.pyplot as plt
 import math
 import time
@@ -31,6 +35,8 @@ FONT = cv2.FONT_HERSHEY_TRIPLEX
 font = cv2.FONT_HERSHEY_PLAIN #cv2.FONT_HERSHEY_TRIPLEX #
 colors = np.random.uniform(0, 255, size=(100, 3))
 
+# force tf2onnx to cpu
+#os.environ['CUDA_VISIBLE_DEVICES'] = "-1"
 #vid_width,vid_height = 1176, 712
  
 #find the shortest distance between two points in space
@@ -47,7 +53,8 @@ def convert_milli(time):
 
 class Tracker:
     def __init__(self, vp, nl, out):
-        '''Tracker class initialisations'''                      
+        '''Tracker class initialisations'''                  
+        self.Start_Time = time.time()
         ##set of threads to load network, input and variables
         threads = list()
         ##thread to load network
@@ -60,7 +67,7 @@ class Tracker:
             thread.start()
         for thread in threads:
             thread.join() 
-        print('\n -Network loaded- ', self.net)            
+        print('\n -Network loaded- ', self.session)            
         #find location of goal node and all start nodes
         self.start_nodes_locations = self.find_location(nl, self.start_nodes, self.goal)
         print('\n  ________  SUMMARY SESSION  ________  ')
@@ -86,11 +93,23 @@ class Tracker:
         self.run_vid()
    
     def load_network(self, n):
+       # Converted onnx weights
+        onnx_weights_path = 'weights/yolov3_training_best.onnx'
+       # Specify your models network size
+        self.network_size = (416, 416)
+       # Declare onnxruntime session
+        self.session = onnxruntime.InferenceSession(onnx_weights_path)
+        self.session.get_modelmeta()
+        onnxruntime.get_device()
+        self.input_name = self.session.get_inputs()[0].name
+        self.output_name_1 = self.session.get_outputs()[0].name
+        self.output_name_2 = self.session.get_outputs()[1].name
+
        # load the model of yolov3-  weights files and cnn structure (.cfg config file)  
-        self.net = cv2.dnn.readNet('weights/yolov3_training_best.weights', 'tools/yolov3_training.cfg')
+       # self.net = cv2.dnn.readNet('weights/yolov3_training_best.weights', 'tools/yolov3_training.cfg')
         #set the backend target to a CUDA-enabled GPU
-        self.net.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)  ##Colab or GPU only
-        self.net.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
+       # self.net.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)  ##Colab or GPU only
+       # self.net.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
         ## load object classes - researcher, rat, head
         self.classes = []
         with open("tools/classes.txt", "r") as f:
@@ -182,8 +201,12 @@ class Tracker:
  
            #close video output and print time tracking
            if self.end_session == True:
-                print( '\n' , self.converted_time, '\n >>>> Session ended with ', self.trial_num ,' trials out of', self.num_trials)           
-                if not ret:
+                print( '\n' , self.converted_time, '\n >>>> Session ended with ', self.trial_num ,' trials out of', self.num_trials)                           
+                if not ret:       
+                    end = time.time()
+                    hours, rem = divmod(end-self.Start_Time, 3600)
+                    minutes, seconds = divmod(rem, 60)
+                    print("Tracking finished in: {:0>2}:{:0>2}:{:05.2f}".format(int(hours),int(minutes),seconds))
                     self.cap.release()
                     self.out.release()
                     break               
@@ -193,6 +216,8 @@ class Tracker:
            #    print('#Program ended by user')
            #   break                 
       #  cv2.destroyAllWindows()  ##Uncomment if not in cv2 ver 4.5.2
+        self.cap.release()
+        self.out.release()
 
     def find_start(self, center_rat):
         '''
@@ -241,40 +266,43 @@ class Tracker:
     def CNN(self, frame):
         self.t1 = time.time()     
         ##input to the CNN - blob.shape: (1, 3, 416, 416) 
-        blob = cv2.dnn.blobFromImage(frame, 1/255, (416, 416), (0,0,0), swapRB=True, crop=False)
-        self.net.setInput(blob)
-        #frame width and width to draw boxes in correct position
-        height, width, _ = frame.shape           
-        output_layers_names = self.net.getUnconnectedOutLayersNames()  #get names of layers that gives output prediction 
-        layerOutputs = self.net.forward(output_layers_names)   ##get prediction from cnn layers
-        
-        boxes = []  #boxes coordinate as x,y,height, width
-        confidences = [] #set to 0.7
-        class_ids = [] #researcher, rat, head 
-        centroids = []
-        self.Rat=None
-    
-        for output in layerOutputs:
-          for detection in output: ##dection in frame check with pretrained darknet
-              scores = detection[5:]            
-              class_id = np.argmax(scores)
-              confidence = scores[class_id]
-              # filter out weak detections by ensuring the predicted
-              # probability is greater than a minimum threshold
-              if confidence > 0.7:
-                 center_x = int(detection[0]*width)
-                 center_y = int(detection[1]*height)
-                 w = int(detection[2]*width)
-                 h = int(detection[3]*height)
-                 x = int(center_x - w/2)
-                 y = int(center_y - h/2)
-                 centroids.append((center_x,center_y))
-                 boxes.append([x, y, w, h])
-                 confidences.append((float(confidence)))
-                 class_ids.append(class_id)
-         ##apply non-max suppression- eliminate double boxes 
-         ##(boxes, confidences, conf_threshold, nms_threshold)
-        indexes = cv2.dnn.NMSBoxes(boxes, confidences, 0.70, 0.3) ##keep boxes with higher confidence
+       # blob = cv2.dnn.blobFromImage(frame, 1/255, (416, 416), (0,0,0), swapRB=True, crop=False)
+       # self.net.setInput(blob)
+        image_blob = cv2.dnn.blobFromImage(frame, 1 / 255.0, (416, 416), swapRB=True, crop=False)
+        # Run inference
+        layers_result = self.session.run([self.output_name_1, self.output_name_2], {self.input_name: image_blob})
+        layers_result = np.concatenate([layers_result[1], layers_result[0]], axis=1)
+        boxes, confidences, class_ids, centroids = [], [], [], []
+        # Convert layers_result to bbox, confs and classes
+        def get_final_predictions(outputs, img, threshold, nms_threshold):
+           height, width = img.shape[0], img.shape[1]
+           
+           matches = outputs[np.where(np.max(outputs[:, 4:], axis=1) > threshold)] 
+           for detect in matches:
+               scores = detect[4:]
+               class_id = np.argmax(scores)
+               confidence = scores[class_id]
+               center_x = int(detect[0] * width)
+               center_y = int(detect[1] * height)
+               w = int(detect[2] * width)
+               h = int(detect[3] * height)
+               x = int(center_x - w/2)
+               y = int(center_y - h / 2)
+               centroids.append((center_x,center_y))
+               boxes.append([x, y, w, h])
+               confidences.append(float(confidence))
+               class_ids.append(class_id)   
+           indexes = cv2.dnn.NMSBoxes(boxes, confidences, threshold, nms_threshold)
+         # merge_boxes_ids Filter only the boxes left after nms 
+           #  boxes = [boxes[int(i)] for i in merge_boxes_ids]
+           #  confidences = [confidence[int(i)] for i in merge_boxes_ids]
+           #  class_ids = [class_ids[int(i)] for i in merge_boxes_ids]
+           return indexes# boxes, confidence, class_ids       boxes, confidences, class_ids, centroids
+        indexes = get_final_predictions(layers_result, frame, 0.7, 0.3)             
+        self.Rat = None
+       ##apply non-max suppression- eliminate double boxes 
+       ##(boxes, confidences, conf_threshold, nms_threshold)
+      #  indexes = cv2.dnn.NMSBoxes(boxes, confidence, 0.70, 0.3) ##keep boxes with higher confidence
         ##go through the detections after filtering out the one with confidence < 0.7
         if len(indexes)>0:   ##indices box= box[i], x=box[0],y=box[1],w=[box[2],h=box[3]]
           for i in indexes.flatten(): ##Return a copy of the array collapsed into one dimension
@@ -319,6 +347,7 @@ class Tracker:
                         if self.record_detections:
                             self.count_rat += 1
                             self.object_detection(rat = self.Rat, frame = frame)
+
                                                                                                                           
     def object_detection(self, rat, frame): 
        if self.pos_centroid is not None:
@@ -375,14 +404,13 @@ class Tracker:
                ##Ephys training - normal trials end after 15 minutes    
                if self.trial_type== '4':
                   self.minutes = self.timer(start = self.start_time)                     
-                  if int(self.minutes)  >= 15:
+                  if int(self.minutes)  >= 14.2:
                       cv2.putText(self.disp_frame, "End 15 minutes normal training",(60,100), fontFace = FONT,
                            fontScale = 0.75, color = (0,255,0), thickness = 1) 
                       print('n\n\n >>> End Normal training trial - 15 minutes passed', self.trial_num, ' out of ', self.num_trials)
                       self.special_start = True ##start a new timer for next NGL trial
                       
   
-    
     def end_trial(self, frame): 
       #make sure last node is saved and written to file before self.record_detections = False
       self.pos_centroid = self.goal_location
