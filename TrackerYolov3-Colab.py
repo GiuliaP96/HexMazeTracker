@@ -320,7 +320,7 @@ class Tracker:
                     self.center_researcher = centroids[i]
                     print('\n Checking proximity...')
                     if self.center_researcher is not None and self.Rat is not None:
-                            if points_dist(self.Rat , self.center_researcher) <= 600:                          
+                            if points_dist(self.Rat , self.center_researcher) <= 800:                          
                                 self.start = True 
                                 print('\n\n >>> Proximity Checked > start new trial')   
  
