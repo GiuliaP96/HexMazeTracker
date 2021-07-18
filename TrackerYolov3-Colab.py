@@ -404,7 +404,7 @@ class Tracker:
                if self.trial_num == int(self.num_trials):
                    print('\n >>>>>>  Session ends with', self.trial_num, ' trials')
                    self.end_session = True 
-                   break
+                  
                ##Ephys training - normal trials end after 15 minutes    
                if self.trial_type== '4':
                   self.minutes = self.timer(start = self.start_time)                     
