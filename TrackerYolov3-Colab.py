@@ -140,6 +140,7 @@ class Tracker:
         self.disp_frame = None
         self.pos_centroid = None #keep centroids rat 
         self.Rat = None ##keep centroid of rat 
+        self.human = False
         self.frame_rate = 0      ##
         self.trial_num = 0        
         self.count_rat=0
@@ -275,8 +276,7 @@ class Tracker:
         boxes, confidences, class_ids, centroids = [], [], [], []
         # Convert layers_result to bbox, confs and classes
         def get_final_predictions(outputs, img, threshold, nms_threshold):
-           height, width = img.shape[0], img.shape[1]
-           
+           height, width = img.shape[0], img.shape[1]           
            matches = outputs[np.where(np.max(outputs[:, 4:], axis=1) > threshold)] 
            for detect in matches:
                scores = detect[4:]
@@ -300,6 +300,7 @@ class Tracker:
            return indexes# boxes, confidence, class_ids       boxes, confidences, class_ids, centroids
         indexes = get_final_predictions(layers_result, frame, 0.7, 0.3)             
         self.Rat = None
+        self.human = False
        ##apply non-max suppression- eliminate double boxes 
        ##(boxes, confidences, conf_threshold, nms_threshold)
       #  indexes = cv2.dnn.NMSBoxes(boxes, confidence, 0.70, 0.3) ##keep boxes with higher confidence
@@ -315,6 +316,7 @@ class Tracker:
 
             ##Check rat-researcher  proximity only when the training trial is not running
             if label == 'researcher':
+                self.human = True
               #not check for start first trial - self.start=True
                 if not self.record_detections and not self.start:
                     self.center_researcher = centroids[i]
@@ -360,7 +362,7 @@ class Tracker:
        self.centroid_list.append(self.pos_centroid)       
                     
        ##New Goal location trial: first trial 10 minutes long
-       if self.NGL:
+       if self.NGL == True:
            self.minutes = self.timer(start = self.start_time)
            if int(self.minutes)  >= 10:
                cv2.putText(self.disp_frame, "End NGL trial",(60,100), fontFace = FONT,
@@ -374,9 +376,10 @@ class Tracker:
                    self.end_session = True  
                if self.trial_type == '4':               
                    self.start_time = (self.frame_time/ (1000*60)) % 60
-                                      
+                   self.start = True ##start 15 minutes of normal trials   
+                  
        ##Probe trial: look for goal locatin reached after first 2 minutes
-       if self.probe:
+       if self.probe == True:
            self.minutes = self.timer(start = self.start_time)
            if int(self.minutes) >= 2: 
                if points_dist(self.pos_centroid, self.goal_location) <= 25:  
@@ -401,6 +404,7 @@ class Tracker:
                if self.trial_num == int(self.num_trials):
                    print('\n >>>>>>  Session ends with', self.trial_num, ' trials')
                    self.end_session = True 
+                   break
                ##Ephys training - normal trials end after 15 minutes    
                if self.trial_type== '4':
                   self.minutes = self.timer(start = self.start_time)                     
@@ -409,6 +413,7 @@ class Tracker:
                            fontScale = 0.75, color = (0,255,0), thickness = 1) 
                       print('n\n\n >>> End Normal training trial - 15 minutes passed', self.trial_num, ' out of ', self.num_trials)
                       self.special_start = True ##start a new timer for next NGL trial
+                      
                       
   
     def end_trial(self, frame): 
