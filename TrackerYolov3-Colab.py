@@ -185,6 +185,7 @@ class Tracker:
 
              #process and display frame
              if self.frame is not None:
+                self.t1 = time.time()     
                 self.disp_frame = self.frame.copy()
                 self.disp_frame = cv2.resize(self.disp_frame, (1176, 712))                 
                 self.CNN(self.disp_frame)  #, Rat, tracker,Init,boxes
@@ -210,7 +211,7 @@ class Tracker:
                     print("Tracking finished in: {:0>2}:{:0>2}:{:05.2f}".format(int(hours),int(minutes),seconds))
                     self.cap.release()
                     self.out.release()
-                    break               
+                    break              
            # key = cv2.waitKey(1) & 0xFF
            # if key == ord('q'):
            #    print('Session ended with ', self.trial_num ,' trials')
@@ -247,8 +248,7 @@ class Tracker:
                                 self.probe = True 
                             if int(self.trial_type) == 2 or int(self.trial_type) == 4 :
                                 self.NGL = True
-                       if self.special_start == True:
-                           self.start_time = (self.frame_time/ (1000*60)) % 60                           
+                       if self.special_start == True:                                                   
                            self.NGL = True
                            self.special_start = False                   
                        self.node_pos = []
@@ -264,8 +264,7 @@ class Tracker:
                        self.record_detections = True  
                        self.start = False #make sure proximitycheck set to false for next start node
         
-    def CNN(self, frame):
-        self.t1 = time.time()     
+    def CNN(self, frame):        
         ##input to the CNN - blob.shape: (1, 3, 416, 416) 
        # blob = cv2.dnn.blobFromImage(frame, 1/255, (416, 416), (0,0,0), swapRB=True, crop=False)
        # self.net.setInput(blob)
@@ -352,13 +351,7 @@ class Tracker:
 
                                                                                                                           
     def object_detection(self, rat, frame): 
-       if self.pos_centroid is not None:
-          if points_dist(self.pos_centroid, rat) < 70:
-             self.pos_centroid = rat        
-          else:
-             self.pos_centroid = self.pos_centroid
-       else:
-          self.pos_centroid = rat    
+       self.pos_centroid = rat    
        self.centroid_list.append(self.pos_centroid)       
                     
        ##New Goal location trial: first trial 10 minutes long
@@ -374,7 +367,7 @@ class Tracker:
                if self.trial_num == int(self.num_trials):
                    print('\n >>>>>>  Session ends with', self.trial_num, ' trials')
                    self.end_session = True  
-               if self.trial_type == '4':               
+               if self.trial_type == '4' and not self.end_session:               
                    self.start_time = (self.frame_time/ (1000*60)) % 60
                    self.start = True ##start 15 minutes of normal trials   
                   
@@ -413,7 +406,7 @@ class Tracker:
                            fontScale = 0.75, color = (0,255,0), thickness = 1) 
                       print('n\n\n >>> End Normal training trial - 15 minutes passed', self.trial_num, ' out of ', self.num_trials)
                       self.special_start = True ##start a new timer for next NGL trial
-                      
+                      self.start_time = (self.frame_time/ (1000*60)) % 60   
                       
   
     def end_trial(self, frame): 
