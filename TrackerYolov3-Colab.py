@@ -548,11 +548,12 @@ class Tracker:
                                       
     #save recorded nodes to file
     def save_to_file(self, fname):
-        savelist = []
+        savelist = [] 
+        print('\nNode crossed')  
         with open(fname, 'a+') as file:
             for k, g in groupby(self.saved_nodes):
                 savelist.append(k)
-                print('\nNode crossed: {}'.format(k))         
+                print('{}'.format(k))         
             file.writelines('%s,' % items for items in savelist)              
             file.write('\nSummary Trial {}\nStart-Next Nodes// Time points(s) //Seconds//Lenght(cm)// Velocity(m/s)\n'.format(self.trial_num)) 
             print('\nSummary Trial {}\nStart-Next Nodes// Time points(s) //Seconds//Lenght(cm)// Velocity(m/s)\n'.format(self.trial_num)) 
