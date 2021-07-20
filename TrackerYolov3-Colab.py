@@ -125,9 +125,9 @@ class Tracker:
           node = input('\n> Enter START node(num) of trial {}: '.format(i+1))
           self.start_nodes.append(int(node))  
         if self.trial_type == '4':     
-          print('\n> Enter position of 10 minutes long trials (e.g. 13) \n Press enter instead when finished. Trial 1 is automatically set to 10min')  
+          print('\n> Enter position of 10 minutes trials (e.g. 12 > enter > 27 ...) \n If done press enter. Trial 1 is automatically set to 10min')  
           for i in range(10):              
-             trial = input('\n>> {} Enter trial number . Press Enter if done : '.format(i+1))
+             trial = input('\n>>  Enter trial number num {}. Press Enter if done : '.format(i+1))
              if trial == '':
                  break
              else:
