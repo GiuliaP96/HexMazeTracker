@@ -184,7 +184,7 @@ class Tracker:
            self.converted_time = convert_milli(int(self.frame_time))
 
            #process and display frame
-           if self.frame is not None:                
+           if ret:                
                 self.t1 = time.time()     
                 self.disp_frame = self.frame.copy()
                 self.disp_frame = cv2.resize(self.disp_frame, (1176, 712)) 
@@ -207,7 +207,7 @@ class Tracker:
                    # cv2.imshow('Tracker', self.disp_frame)
                    self.out.write(self.disp_frame)  
                    print( '\n' , self.converted_time, '\n >>>> Session ended with ', self.trial_num ,' trials out of', self.num_trials)                           
-                   if not ret:       
+           if not ret:       
                      end = time.time()
                      hours, rem = divmod(end-self.Start_Time, 3600)
                      minutes, seconds = divmod(rem, 60)
@@ -215,14 +215,14 @@ class Tracker:
                      self.cap.release()
                      self.out.release()
                      break         
-           # key = cv2.waitKey(1) & 0xFF
+           # key = cv2.waitKey(1) & 0xFF   ##uncomment lines below if running outside Colab
            # if key == ord('q'):
            #    print('Session ended with ', self.trial_num ,' trials')
            #    print('#Program ended by user')
            #   break                 
-      #  cv2.destroyAllWindows()  ##Uncomment if not in cv2 ver 4.5.2
-        self.cap.release()
-        self.out.release()
+         #cv2.destroyAllWindows()  ##Uncomment if not in cv2 ver 4.5.2
+         #self.cap.release()
+         #self.out.release()
 
     def find_start(self, center_rat):
         '''
@@ -230,8 +230,8 @@ class Tracker:
 
         '''             
         ##calculate coordinate rectangle in start node 
-        print( '\n' , self.converted_time, '\n >>> Waiting Start Next Trial: ', self.trial_num +1 , ' Start node:', self.start_nodes[self.trial_num])       
-        print('Rat position', self.pos_centroid, 'Node', self.start_nodes_locations[self.trial_num])
+        print( '\n' , self.converted_time, '\n >>> Waiting Start Next Trial: ', self.trial_num+1, ' Start node:', self.start_nodes[self.trial_num])       
+        #print('Rat position', self.pos_centroid, 'Node', self.start_nodes_locations[self.trial_num])
         node =  self.start_nodes_locations[self.trial_num]
         x = int(node[0])
         y= int(node[1]) 
@@ -242,7 +242,8 @@ class Tracker:
          # if self.center_researcher is not None: 
              #if points_dist(node, self.center_researcher) > 40:
                        self.trial_num += 1
-                       print('\n >>> New Trial Start: ', self.trial_num, '\nLocation start rat',center_rat,'node', node, 'distance at start', round(points_dist(center_rat, node)))                      
+                       print('\n\n >>>> Start Trial {}' .format(self.trial_num))
+                       print('\nDistance researcher-rat start', round(points_dist(center_rat, node)))                      
                        self.logger.info('Recording Trial {}'.format(self.trial_num))                                               
                        ##Handle first trial Ephys, probe and NGL special trials types - start time to run the timer
                        if self.trial_num == 1 and int(self.trial_type) != 1:
