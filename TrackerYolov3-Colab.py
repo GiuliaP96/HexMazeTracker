@@ -195,12 +195,13 @@ class Tracker:
                    self.out.write(self.disp_frame)   
                    #close video output and print time tracking                                  
                  #log present centroid position if program is in 'save mode'
-           if self.record_detections:
-                if self.pos_centroid is not None:
-                     if self.saved_nodes:
+                if self.record_detections:
+                   if self.pos_centroid is not None:
+                       if self.saved_nodes:
                           self.logger.info(f'{self.converted_time} : The rat position is: {self.pos_centroid} @ {self.saved_nodes[-1]}')                  
-                     else:
+                       else:
                           self.logger.info(f'{self.converted_time} : The rat position is: {self.pos_centroid}') #pos_centroid
+                
                 if self.end_session == True:
                    self.annotate_frame(self.disp_frame)
                    # cv2.imshow('Tracker', self.disp_frame)
@@ -213,7 +214,7 @@ class Tracker:
                      print("Tracking finished in: {:0>2}:{:0>2}:{:05.2f}".format(int(hours),int(minutes),seconds))
                      self.cap.release()
                      self.out.release()
-                              
+                     break         
            # key = cv2.waitKey(1) & 0xFF
            # if key == ord('q'):
            #    print('Session ended with ', self.trial_num ,' trials')
@@ -237,7 +238,9 @@ class Tracker:
         w= 15 
         h=  13                  
         cv2.rectangle(self.disp_frame, (x-w,y+h), (x+w,y-h),(0,255,0), 2) 
-        if points_dist(center_rat, node) < 30: 
+        if points_dist(center_rat, node) < 25: 
+         # if self.center_researcher is not None: 
+             #if points_dist(node, self.center_researcher) > 40:
                        self.trial_num += 1
                        print('\n >>> New Trial Start: ', self.trial_num, '\nLocation start rat',center_rat,'node', node, 'distance at start', round(points_dist(center_rat, node)))                      
                        self.logger.info('Recording Trial {}'.format(self.trial_num))                                               
