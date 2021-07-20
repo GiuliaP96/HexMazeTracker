@@ -237,9 +237,7 @@ class Tracker:
         w= 15 
         h=  13                  
         cv2.rectangle(self.disp_frame, (x-w,y+h), (x+w,y-h),(0,255,0), 2) 
-        if points_dist(center_rat, node) < 25: 
-         # if self.center_researcher is not None: 
-             #if points_dist(node, self.center_researcher) > 40:
+        if points_dist(center_rat, node) < 30: 
                        self.trial_num += 1
                        print('\n >>> New Trial Start: ', self.trial_num, '\nLocation start rat',center_rat,'node', node, 'distance at start', round(points_dist(center_rat, node)))                      
                        self.logger.info('Recording Trial {}'.format(self.trial_num))                                               
