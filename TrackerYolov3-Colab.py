@@ -150,6 +150,7 @@ class Tracker:
         self.start_time = 0 #timer
         self.probe = False      ##True if trial type = 3. PT:2 min timer starts upon rat placement, whe passed wait until rat reaches goal location 
         self.NGL = False
+        self.normal_trial = False
         #change maxlen value to chnage how long the path line is
         self.centroid_list = deque(maxlen = 500)       
         self.node_pos = []
@@ -260,6 +261,8 @@ class Tracker:
                                 self.NGL = True
                                 self.start_time = (self.frame_time/ (1000*60)) % 60      
                                 print('\n >>> Start 10 minutes trial ephys: ',self.start_time)
+                       if not self.probe and not self.NGL : 
+                            self.normal_trial = True
                        self.node_pos = []
                        self.centroid_list = []
                        self.time_points=[]
@@ -267,9 +270,10 @@ class Tracker:
                        self.saved_nodes = []        
                        self.node_id = []   ##node num
                        self.saved_velocities=[]
+                      
+                       self.record_detections = True
                        self.pos_centroid = node
-                       self.centroid_list.append(self.pos_centroid)                        
-                       self.record_detections = True  
+                       self.centroid_list.append(self.pos_centroid)                                                 
                        self.start_trial = False #make sure proximitycheck set to false for next start node
         
     def CNN(self, frame):        
@@ -380,12 +384,13 @@ class Tracker:
                        self.end_session = True                            
 
         ##Normal training - Check if rat reached Goal location  
-       if not self.probe and not self.NGL:                     
-           if points_dist(self.pos_centroid, self.goal_location) <= 20:
+       if self.normal_trial:                     
+           if points_dist(self.pos_centroid, self.goal_location) <= 25:
                cv2.putText(self.disp_frame, "Goal location reached", (60,100), fontFace = FONT,
                                 fontScale = 0.75, color = (0,255,0), thickness = 1)
                print('\n\n >>> Goal location reached. End of trial ', self.trial_num, ' out of ', self.num_trials, '\nCount rat', self.count_rat, ' head', self.count_head)
                self.end_trial()
+               self.normal_trial = False
                ##Check if session is finished
                if self.trial_num == int(self.num_trials):
                    print('\n >>>>>>  Session ends with', self.trial_num, ' trials')
