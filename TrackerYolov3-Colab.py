@@ -239,7 +239,7 @@ class Tracker:
         w= 15 
         h=  13                  
         cv2.rectangle(self.disp_frame, (x-w,y+h), (x+w,y-h),(0,255,0), 2) 
-        if points_dist(center_rat, node) < 25: 
+        if points_dist(center_rat, node) < 30: 
          # if self.center_researcher is not None: 
              #if points_dist(node, self.center_researcher) > 40:
                        self.trial_num += 1
