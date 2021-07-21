@@ -207,7 +207,7 @@ class Tracker:
                    # cv2.imshow('Tracker', self.disp_frame)
                    self.out.write(self.disp_frame)  
                    print( '\n' , self.converted_time, '\n >>>> Session ended with ', self.trial_num ,' trials out of', self.num_trials)                           
-                   if not ret:       
+           if not ret and self.end_session:       
                      end = time.time()
                      hours, rem = divmod(end-self.Start_Time, 3600)
                      minutes, seconds = divmod(rem, 60)
