@@ -222,8 +222,8 @@ class Tracker:
            #    print('#Program ended by user')
            #   break                 
          #cv2.destroyAllWindows()  ##Uncomment if not in cv2 ver 4.5.2
-         #self.cap.release()
-         #self.out.release()
+        self.cap.release()
+        self.out.release()
 
     def find_start(self, center_rat):
         '''
