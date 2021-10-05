@@ -149,13 +149,14 @@ class Tracker:
         self.node_list = str(nl)
         self.cap = cv2.VideoCapture(str(vp))
 
-        self.start_trial = True  ##check start node if researcher is present before trial start
-        self.end_session = False  ##check last goal location reached
+        self.start_trial = True   # Check start node if researcher is present before trial start
+        self.end_session = False  # Check last goal location reached
+        self.check = False        # Check for proximity between researcher and rat
+        self.record_detections = False  ##True to save nodes
         self.goal_location = None
         self.frame = None
         self.disp_frame = None
         self.pos_centroid = None  # keep centroid rat
-        self.record_detections = False  ##True to save nodes
         self.center_researcher = None
         self.trial_num = 0
         self.count_rat = 0
@@ -210,8 +211,8 @@ class Tracker:
             # cv2.imshow('Tracker', self.disp_frame) #Uncomment outside Colba
               # Keep recording video until it ends
               if self.end_session:
-                    cv2.putText(self.disp_frame, "Session Ended", (60, 100), fontFace=FONT,
-                            fontScale=0.75, color=(0, 255, 0), thickness=1)
+                    cv2.putText(self.disp_frame, "Session Finished", (60, 60),
+                        fontFace=FONT, fontScale=0.75, color=(0, 255, 0), thickness=1)
                     print('\n', self.converted_time, '\n >>>> Session ended with ', self.trial_num, ' trials out of',
                           self.num_trials)
               self.out.write(self.disp_frame)
@@ -338,7 +339,9 @@ class Tracker:
                 # Check rat-researcher  proximity only when the training trial is not running
                 if label == 'researcher':
                     # not check for start first trial - self.start_trial=True
-                    if not self.end_session and self.record_detections and not self.start_trial:
+                    if not self.check and not self.start_trial and not self.end_session and not self.record_detections:
+                        self.check = True
+                    if self.check:
                         self.Researcher = centroids[i]
                         print('\n Checking proximity...')
                         # Researcher and rat close > start detections on new start node
@@ -346,6 +349,7 @@ class Tracker:
                                                                                                 self.Researcher) <= 900:
                             self.start_trial = True
                             print('\n\n >>> Proximity Checked > start new trial')
+                            self.check = False
 
                 # Get box centroid if label object is head - main object to detect, if None take centroid rat body
                 if label == 'head':
@@ -634,4 +638,3 @@ if __name__ == "__main__":
     print('\n\nTracker version: v2.00\n\n')
 
     Tracker(vp=args.vid_path, nl=node_list, out=args.output)
-    
