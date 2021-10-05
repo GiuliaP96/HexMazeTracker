@@ -220,14 +220,13 @@ class Tracker:
                     print('\n', self.converted_time, '\n >>>> Session ended with ', self.trial_num, ' trials out of',
                           self.num_trials)
             # close video output and print time required for tracking
-            else:
-                end = time.time()
-                hours, rem = divmod(end - self.Start_Time, 3600)
-                minutes, seconds = divmod(rem, 60)
-                print("Tracking process finished in: {:0>2}:{:0>2}:{:05.2f}".format(int(hours), int(minutes), seconds))
-                self.cap.release()
-                self.out.release()
-                break
+                    end = time.time()
+                    hours, rem = divmod(end - self.Start_Time, 3600)
+                    minutes, seconds = divmod(rem, 60)
+                    print("Tracking process finished in: {:0>2}:{:0>2}:{:05.2f}".format(int(hours), int(minutes), seconds))
+                    self.cap.release()
+                    self.out.release()
+                    break
                 # key = cv2.waitKey(1) & 0xFF   ##uncomment lines below if running outside Colab
             # if key == ord('q'):
             #    print('Session ended with ', self.trial_num ,' trials')
@@ -318,7 +317,7 @@ class Tracker:
             confidences.append(float(confidence))
             class_ids.append(class_id)
         # apply non-max suppression- eliminate double boxes keep boxes with higher confidence threshold - > 0.8, nms_threshold - > 0.3
-        indexes = cv2.dnn.NMSBoxes(boxes, confidences, 0.8, 0.3)
+        indexes = cv2.dnn.NMSBoxes(boxes, confidences, 0.7, 0.3)
         self.Rat = None  ##keep rat head position, if none, takes rat body instead
         self.Researcher = None
         if len(indexes) > 0:  # indices box= box[i], x=box[0],y=box[1],w=[box[2],h=box[3]]
