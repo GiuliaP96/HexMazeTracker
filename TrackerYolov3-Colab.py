@@ -280,6 +280,8 @@ class Tracker:
                         self.NGL = True
                         self.start_time = (self.frame_time / (1000 * 60)) % 60
                         print('\n >>> Start 10 minutes trial ephys: ', self.start_time)
+                    else:
+                        self.normal_trial = True
             if not self.probe and not self.NGL:
                         self.normal_trial = True
             self.node_pos = []
