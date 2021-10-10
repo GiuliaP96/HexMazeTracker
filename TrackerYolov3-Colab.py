@@ -154,6 +154,7 @@ class Tracker:
         self.check = False        # Check for proximity between researcher and rat
         self.record_detections = False  ##True to save nodes
         self.goal_location = None
+        self.reached = False
         self.frame = None
         self.disp_frame = None
         self.pos_centroid = None  # keep centroid rat
@@ -280,8 +281,6 @@ class Tracker:
                         self.NGL = True
                         self.start_time = (self.frame_time / (1000 * 60)) % 60
                         print('\n >>> Start 10 minutes trial ephys: ', self.start_time)
-                    else:
-                        self.normal_trial = True
             if not self.probe and not self.NGL:
                         self.normal_trial = True
             self.node_pos = []
@@ -385,14 +384,21 @@ class Tracker:
         if self.NGL:
             # Keep minutes passed for 10 min trials
             minutes = self.timer(start=self.start_time)
+            if not self.reached:
+                if points_dist(self.pos_centroid, self.goal_location) <= 25:
+                    self.reached = True
             if minutes >= 10:
-                print('n\n\n >>> End New Goal Location Trial - timeout', self.trial_num, ' out of ', self.num_trials)
-                self.NGL = False
-                self.end_trial()
-                # Check if session is finished
-                if self.trial_num == int(self.num_trials):
-                    print('\n >>>>>>  Session ends with', self.trial_num, ' trials')
-                    self.end_session = True
+                print('n\n\n >>> Ten minute passed... Goal location reached:', self.reached)
+                # If not reached wait till the rat is guided towards it
+                if self.reached:
+                    print('n\n\n >>> End New Goal Location Trial - timeout', self.trial_num, ' out of ', self.num_trials)
+                    self.NGL = False
+                    self.reached = False
+                    self.end_trial()
+                    # Check if session is finished
+                    if self.trial_num == int(self.num_trials):
+                       print('\n >>>>>>  Session ends with', self.trial_num, ' trials')
+                       self.end_session = True
 
         # Probe trial: look for goal locatin reached after first 2 minutes
         if self.probe:
