@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
 Title: Tracker
-
 Description: Offline tracker for detection of rats
              in the novel Hex-Maze experiment as
              a replacement for the manual location scoring.
@@ -9,12 +8,9 @@ Description: Offline tracker for detection of rats
              gives as output the tracked video with path annotations
              (.mp4), complete trials locations detected (.logs)
              and session summary (.txt).
-
 Organistaion: Genzel Lab, Donders Institute
               Radboud University, Nijmegen
-
 Author(s): Atharva Kand-Giulia Porro
-
 Notes: If run outside Colab uncomment last lines of run_vid (e.g. cv2.destroyAllWindows()
        and key = cv2.waitKey(1) & 0xFF) ##see comment lines
 '''
@@ -211,13 +207,7 @@ class Tracker:
               self.annotate_frame(self.disp_frame)
             # cv2.imshow('Tracker', self.disp_frame) #Uncomment outside Colba
               # Keep recording video until it ends
-              if self.end_session:
-                    cv2.putText(self.disp_frame, "Session Finished", (60, 60),
-                        fontFace=FONT, fontScale=0.75, color=(0, 255, 0), thickness=1)
-                    print('\n', self.converted_time, '\n >>>> Session ended with ', self.trial_num, ' trials out of',
-                          self.num_trials)
               self.out.write(self.disp_frame)
-
               # Save centroid position in log file if trial started
               if self.record_detections:
                     if self.saved_nodes:
@@ -225,6 +215,12 @@ class Tracker:
                     else:
                         self.logger.info(
                             f'{self.converted_time} : The rat position is: {self.pos_centroid}')  # pos_centroid
+                   
+              if self.end_session:
+                    cv2.putText(self.disp_frame, "Session Finished", (60, 60),
+                        fontFace=FONT, fontScale=0.75, color=(0, 255, 0), thickness=1)
+                    print('\n', self.converted_time, '\n >>>> Session ended with ', self.trial_num, ' trials out of',
+                          self.num_trials)
 
       # Uncomment lines below if running outside Colab
           # key = cv2.waitKey(1) & 0xFF
@@ -247,7 +243,6 @@ class Tracker:
     def find_start(self, center_rat):
         '''
         Function to find start of each trial [rat at least 40 pixels from center of start node]
-
         '''
         # calculate coordinate rectangle in start node
         print('\n', self.converted_time, '\n >>> Waiting Start Next Trial: ', self.trial_num + 1, ' Start node:',
@@ -385,7 +380,7 @@ class Tracker:
             # Keep minutes passed for 10 min trials
             minutes = self.timer(start=self.start_time)
             if not self.reached:
-                if points_dist(self.pos_centroid, self.goal_location) <= 25:
+                if points_dist(self.pos_centroid, self.goal_location) <= 20:
                     self.reached = True
             if minutes >= 10:
                 print('n\n\n >>> Ten minute passed... Goal location reached:', self.reached)
@@ -395,37 +390,25 @@ class Tracker:
                     self.NGL = False
                     self.reached = False
                     self.end_trial()
-                    # Check if session is finished
-                    if self.trial_num == int(self.num_trials):
-                       print('\n >>>>>>  Session ends with', self.trial_num, ' trials')
-                       self.end_session = True
 
-        # Probe trial: look for goal locatin reached after first 2 minutes
+        # Probe trial: look for goal location reached after first 2 minutes
         if self.probe:
             # Keep minutes passed for 2min probe trials
             minutes = self.timer(start=self.start_time)
             if minutes >= 2:
-                if points_dist(self.pos_centroid, self.goal_location) <= 25:
+                if points_dist(self.pos_centroid, self.goal_location) <= 20:
                     print('\n\n >>> End Probe trial', self.trial_num, ' out of ', self.num_trials, '\nCount rat',
                           self.count_rat, ' head', self.count_head)
                     self.probe = False
                     self.end_trial()
-                    # Check if session is finished
-                    if self.trial_num == int(self.num_trials):
-                        print('\n >>>>>>  Session ends with', self.trial_num, ' trials')
-                        self.end_session = True
 
         # Normal training - Check if rat reached Goal location
         if self.normal_trial:
-            if points_dist(self.pos_centroid, self.goal_location) <= 25:
+            if points_dist(self.pos_centroid, self.goal_location) <= 20:
                 print('\n\n >>> Goal location reached. End of trial ', self.trial_num, ' out of ', self.num_trials,
                       '\nCount rat', self.count_rat, ' head', self.count_head)
-                self.end_trial()
                 self.normal_trial = False
-                # Check if session is finished
-                if self.trial_num == int(self.num_trials):
-                    print('\n >>>>>>  Session ends with', self.trial_num, ' trials')
-                    self.end_session = True
+                self.end_trial()
 
     def end_trial(self):
         # make sure last node is saved and written to file before self.record_detections = False
@@ -433,11 +416,22 @@ class Tracker:
         self.centroid_list.append(self.pos_centroid)
         self.annotate_frame(self.disp_frame)
         #if rat reached goal node calculate velocities and save to file
-        self.count_rat = 0
-        self.count_head = 0
+        # Save last centroid position in log file
+        if self.saved_nodes:
+                self.logger.info(
+                    f'{self.converted_time} : The rat position is: {self.pos_centroid} @ {self.saved_nodes[-1]}')
+        else:
+                self.logger.info(
+                    f'{self.converted_time} : The rat position is: {self.pos_centroid}')  # pos_centroid
         self.calculate_velocity(self.time_points)
         self.save_to_file(self.save)
+        # Check if session is finished
+        if self.trial_num == int(self.num_trials):
+            print('\n >>>>>>  Session ends with', self.trial_num, ' trials')
+            self.end_session = True
         self.record_detections = False
+        self.count_rat = 0
+        self.count_head = 0
 
     # Timer for new goal location and probe trials
     def timer(self, start):
@@ -498,7 +492,6 @@ class Tracker:
     @staticmethod
     def annotate_node(frame, point, node, t):
         '''Annotate traversed nodes on to the frame
-
         Input: Frame (to be annotated), Point: x, y coords of node, Node: Node name, t 1=start,2=walked,3=goal
         '''
         if t == 1:
@@ -548,8 +541,8 @@ class Tracker:
 
             self.annotate_node(frame, point=self.start_nodes_locations[self.trial_num],
                                node=self.start_nodes[self.trial_num], t=1)
-
-        # Frame annotations during recording
+        
+                  # Frame annotations during recording
         if self.record_detections:
             # if the centroid position of rat is within 20 pixels of any node
             # register that node to a list.
@@ -565,7 +558,7 @@ class Tracker:
                         self.time_points.append([self.converted_time, node_name])
                     if node_name != self.saved_nodes[(len(self.saved_nodes)) - 2]:  ##
                         self.time_points.append([self.converted_time, node_name])
-
+         
             # Draw text in frame during trial
             cv2.putText(frame, 'Trial:' + str(self.trial_num), (60, 60),
                         fontFace=FONT, fontScale=0.75, color=(255, 255, 255), thickness=1)
@@ -589,9 +582,9 @@ class Tracker:
                      (self.pos_centroid[0], self.pos_centroid[1] + 5),
                      color=(0, 255, 0), thickness=2)
 
-        # Annotate all nodes the rat has traversed
-        for i in range(0, len(self.saved_nodes)):
-            self.annotate_node(frame, point=self.node_pos[i], node=self.saved_nodes[i],
+           # Annotate all nodes the rat has traversed
+            for i in range(0, len(self.saved_nodes)):
+              self.annotate_node(frame, point=self.node_pos[i], node=self.saved_nodes[i],
                                t=2)  #t=2 walked node during the trial
 
     # Save recorded nodes and calculated timepoints and velocities to file
