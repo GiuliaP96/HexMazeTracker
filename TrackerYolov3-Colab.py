@@ -320,7 +320,7 @@ class Tracker:
             confidences.append(float(confidence))
             class_ids.append(class_id)
         # Apply non-max suppression- eliminate double boxes keep boxes with higher confidence threshold - > 0.7, nms_threshold - > 0.3
-        indexes = cv2.dnn.NMSBoxes(boxes, confidences, 0.7, 0.3)
+        indexes = cv2.dnn.NMSBoxes(boxes, confidences, 0.9, 0.3)
         self.Rat = None  # keep rat head position, if none, takes rat body instead
         self.Researcher = None
         if len(indexes) > 0:  # indices box= box[i], x=box[0],y=box[1],w=[box[2],h=box[3]]
