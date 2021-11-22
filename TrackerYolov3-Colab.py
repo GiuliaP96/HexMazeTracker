@@ -383,10 +383,10 @@ class Tracker:
                 if points_dist(self.pos_centroid, self.goal_location) <= 20:
                     self.reached = True
             if minutes >= 10:
-                print('n\n\n >>> Ten minute passed... Goal location reached:', self.reached)
+                print('\n\n >>> Ten minute passed... Goal location reached:', self.reached)
                 # If not reached wait till the rat is guided towards it
                 if self.reached:
-                    print('n\n\n >>> End New Goal Location Trial - timeout', self.trial_num, ' out of ', self.num_trials)
+                    print('\n\n >>> End New Goal Location Trial - timeout', self.trial_num, ' out of ', self.num_trials)
                     self.NGL = False
                     self.reached = False
                     self.end_trial()
