@@ -119,11 +119,11 @@ class Tracker:
 
     def load_session(self, vp, nl, n, out):
         # experiment meta-data
-        start_point = input("\n>> Do you want to start tracking the video from a specific time point? \n\n > Press enter if you want to start tracking from the beginning \n   OR \n > Type starting point from the start of the video. Minutes (e.g.00:58:26.500 = 58): \n")
+        start_point = input("\n>> Do you want to start tracking the video from a specific time point? \n\n > Press enter if you want to start tracking from the beginning \n   OR \n > Type starting point from the start of the video. Minutes (e.g.00:58:26.500 = 58; 01:02:26.500 = 62): \n")
         if start_point == '':
             self.start_point = None
         else:
-            start_point_seconds = input('\n Seconds (e.g. 26.5 ):')
+            start_point_seconds = input('\n Seconds (e.g. 00:58:26.500 = 26.5 ): ')
             self.start_point = (float(start_point)*60) + float(start_point_seconds)
             self.custom_trial = input('\n From which trial does the tracking start?')
         self.rat = input("\n>> Enter rat number: ")
@@ -218,7 +218,7 @@ class Tracker:
                 self.cnn(self.disp_frame)  # , Rat, tracker,Init,boxes
                 self.annotate_frame(self.disp_frame)
                 # Uncomment line below to show video on screen outside Colab
-                cv2.imshow('Tracker', self.disp_frame)
+             #   cv2.imshow('Tracker', self.disp_frame)
                 # Keep recording video until it ends
                 self.out.write(self.disp_frame)
                 # Save centroid position in log file if trial started
