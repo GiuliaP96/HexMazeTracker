@@ -136,15 +136,17 @@ class Tracker:
         self.start_nodes = []
         self.special_trials = []
         for i in range(int(self.num_trials)):
-            node = input('\n> Enter START node (number) of trial {}: '.format(i + 1))
-            self.start_nodes.append(int(node))
+            if self.start_point is not None:
+                node = input('\n> Enter START node (number) of trial {}: '.format(int(self.custom_trial) + i))
+                self.start_nodes.append(int(node))
+            else:
+                node = input('\n> Enter START node (number) of trial {}: '.format(i + 1))
+                self.start_nodes.append(int(node))
         if self.trial_type == '4':
             print(
                 '\n> Enter position of 10 minutes trials (e.g. 12 > enter > 27 ...) \n Press enter when all 10 minutes trials are entered.')
-            if  self.start_point is not None:
-               print(' \n If video does not start from the beginning consider trial', self.custom_trial, 'as trial number 1')
             for i in range(10):
-                trial = input('\n>>  Enter trial number num {}. Press Enter if done : '.format(i + 1))
+                trial = input('\n>>  Enter trial number n{}. Press Enter if done : '.format(i + 1))
                 if trial == '':
                     break
                 else:
@@ -153,7 +155,6 @@ class Tracker:
 
         self.node_list = str(nl)
         self.cap = cv2.VideoCapture(str(vp))
-
         self.start_trial = True  # Check start node if researcher is present before trial start
         self.end_session = False  # Check last goal location reached
         self.check = False  # Check for proximity between researcher and rat
@@ -164,7 +165,11 @@ class Tracker:
         self.disp_frame = None
         self.pos_centroid = None  # keep centroid rat
         self.center_researcher = None
-        self.trial_num = 0
+        if self.start_point is None:
+           self.trial_num = 1
+        else:
+           self.trial_num = int(self.custom_trial)
+        self.counter = 0 #keep count of trials
         self.count_rat = 0
         self.count_head = 0
         self.start_time = 0  # timer start time
@@ -182,7 +187,7 @@ class Tracker:
         self.saved_nodes = []
         self.saved_velocities = []
         self.summary_trial = []
-        # self.store_fps = [] # store fps for mean
+        self.store_fps = [] # store fps for mean
 
         self.save = '{}/logs/{}_{}'.format(out, str(self.date), 'Rat' + self.rat + '.txt')  # str(date.today())
         ##set output video saved in folder video/'date_unique file name'.mp4
@@ -199,8 +204,9 @@ class Tracker:
         Frame by Frame looping of video
         '''
         print('\nStarting video.....\n')
-        with open(self.save, 'a+') as file:
-            file.write(f"Rat number: {self.rat} , Date: {self.date} \n")
+        if self.start_point is None:
+            with open(self.save, 'a+') as file:
+                file.write(f"Rat number: {self.rat} , Date: {self.date} \n")
         self.Start_Time = time.time()
         # If a specific time point in which to start the video was specified calculate frame_count index and start video from that frame
         if self.start_point is not None:
@@ -261,9 +267,9 @@ class Tracker:
         print("Tracking process finished in: {:0>2}:{:0>2}:{:05.2f}".format(int(hours), int(minutes), seconds))
         self.cap.release()
         self.out.release()
-        # import statistics
-        # mean_fps = statistics.mean(self.store_fps)
-        # print('Average fps',mean_fps)
+        import statistics
+        mean_fps = statistics.mean(self.store_fps)
+        print('Average fps',mean_fps)
     # Uncomment outside colab
      #  cv2.destroyAllWindows()
 
@@ -272,22 +278,19 @@ class Tracker:
         Function to find start of each trial [rat at least 40 pixels from center of start node]
         '''
         # calculate coordinate rectangle in start node
-        print('\n', self.converted_time, '\n >>> Waiting Start Next Trial: ', self.trial_num + 1, ' Start node:',
-              self.start_nodes[self.trial_num])
+        print('\n', self.converted_time, '\n >>> Waiting Start Next Trial: ', self.trial_num, ' Start node:',
+              self.start_nodes[self.counter])
         # print('Rat position', self.pos_centroid, 'Node', self.start_nodes_locations[self.trial_num])
-        node = self.start_nodes_locations[self.trial_num]
+        node = self.start_nodes_locations[self.counter]
         x = int(node[0])
         y = int(node[1])
         w = 15
         h = 13
         cv2.rectangle(self.disp_frame, (x - w, y + h), (x + w, y - h), (0, 255, 0), 2)
         if points_dist(center_rat, node) < 30:
-            # if self.center_researcher is not None:
-            # if points_dist(node, self.center_researcher) > 40:
-            self.trial_num += 1
+            self.logger.info('Recording Trial {}'.format(self.trial_num))
             print('\n\n >>>> Start Trial {}'.format(self.trial_num))
             print('\nDistance researcher-rat start', round(points_dist(center_rat, node)))
-            self.logger.info('Recording Trial {}'.format(self.trial_num))
             # Handle first trial Ephys, probe and NGL special trials types - start time to run the timer
             if self.trial_num == 1 and int(self.trial_type) != 1:
                 self.start_time = (self.frame_time / (1000 * 60)) % 60
@@ -304,7 +307,8 @@ class Tracker:
                         self.start_time = (self.frame_time / (1000 * 60)) % 60
                         print('\n >>> Start 10 minutes trial ephys: ', self.start_time)
             if not self.probe and not self.NGL:
-                self.normal_trial = True
+                    self.normal_trial = True
+            self.counter += 1
             self.node_pos = []
             self.centroid_list = []
             self.time_points = []
@@ -312,7 +316,6 @@ class Tracker:
             self.saved_nodes = []
             self.node_id = []  ##node num
             self.saved_velocities = []
-
             self.record_detections = True  # start object detection
             self.pos_centroid = node
             self.centroid_list.append(self.pos_centroid)
@@ -370,6 +373,7 @@ class Tracker:
                                                                                                 self.Researcher) <= 900:
                             self.start_trial = True
                             print('\n\n >>> Proximity Checked > start new trial')
+                            self.trial_num += 1
                             self.check = False
 
                 # Get box centroid if label object is head - main object to detect, if None take centroid rat body
@@ -452,8 +456,8 @@ class Tracker:
         self.calculate_velocity(self.time_points)
         self.save_to_file(self.save)
         # Check if session is finished
-        if self.trial_num == int(self.num_trials):
-            print('\n >>>>>>  Session ends with', self.trial_num, ' trials')
+        if self.counter == int(self.num_trials):
+            print('\n >>>>>>  Session ends with', self.counter, ' trials. Last trial number', self.trial_num)
             self.end_session = True
         self.record_detections = False
         self.count_rat = 0
@@ -554,19 +558,19 @@ class Tracker:
         cv2.putText(frame, str(self.converted_time), (970, 670),
                     fontFace=FONT, fontScale=0.75, color=(240, 240, 240), thickness=1)
         fps = 1. / (time.time() - self.t1) # calculate tracking speed in fps
-        # self.store_fps.append(fps)
+        self.store_fps.append(fps)
         cv2.putText(frame, "FPS: {:.2f}".format(fps), (970, 650), fontFace=FONT, fontScale=0.75, color=(240, 240, 240),
                     thickness=1)
         self.annotate_node(frame, point=self.goal_location, node=self.goal, t=3)
         # Frame annotations while waiting rat to be placed in next start node
         if self.start_trial:
-            cv2.putText(frame, 'Next trial:' + str(self.trial_num + 1), (60, 60),
+            cv2.putText(frame, 'Next trial:' + str(self.counter + 1), (60, 60),
                         fontFace=FONT, fontScale=0.75, color=(255, 255, 255), thickness=1)
             cv2.putText(frame, 'Waiting start new trial...', (60, 80),
                         fontFace=FONT, fontScale=0.75, color=(255, 255, 255), thickness=1)
 
-            self.annotate_node(frame, point=self.start_nodes_locations[self.trial_num],
-                               node=self.start_nodes[self.trial_num], t=1)
+            self.annotate_node(frame, point=self.start_nodes_locations[self.counter],
+                               node=self.start_nodes[self.counter], t=1)
 
             # Frame annotations during recording
         if self.record_detections:
@@ -617,10 +621,6 @@ class Tracker:
     def save_to_file(self, fname):
         savelist = []
         print('\nNode crossed')
-        if self.start_point is not None:
-            trial_num = int(self.custom_trial) + (int(self.trial_num)-1)
-        else:
-            trial_num = self.trial_num
         with open(fname, 'a+') as file:
             for k, g in groupby(self.saved_nodes):
                 savelist.append(k)
@@ -628,10 +628,10 @@ class Tracker:
             file.writelines('%s,' % items for items in savelist)
             file.write(
                 '\nSummary Trial {}\nStart-Next Nodes// Time points(s) //Seconds//Lenght(cm)// Velocity(m/s)\n'.format(
-                    trial_num))
+                    self.trial_num))
             print(
                 '\nSummary Trial {}\nStart-Next Nodes// Time points(s) //Seconds//Lenght(cm)// Velocity(m/s)\n'.format(
-                    trial_num))
+                    self.trial_num))
             for i in range(0, len(self.summary_trial)):
                 line = " ".join(map(str, self.summary_trial[i]))
                 file.write(line + '\n')
