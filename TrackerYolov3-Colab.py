@@ -182,7 +182,7 @@ class Tracker:
         self.saved_nodes = []
         self.saved_velocities = []
         self.summary_trial = []
-        self.store_fps = [] # store fps for mean
+        # self.store_fps = [] # store fps for mean
 
         self.save = '{}/logs/{}_{}'.format(out, str(self.date), 'Rat' + self.rat + '.txt')  # str(date.today())
         ##set output video saved in folder video/'date_unique file name'.mp4
@@ -261,9 +261,9 @@ class Tracker:
         print("Tracking process finished in: {:0>2}:{:0>2}:{:05.2f}".format(int(hours), int(minutes), seconds))
         self.cap.release()
         self.out.release()
-        import statistics
-        mean_fps = statistics.mean(self.store_fps)
-        print('Average fps',mean_fps)
+        # import statistics
+        # mean_fps = statistics.mean(self.store_fps)
+        # print('Average fps',mean_fps)
     # Uncomment outside colab
      #  cv2.destroyAllWindows()
 
@@ -554,7 +554,7 @@ class Tracker:
         cv2.putText(frame, str(self.converted_time), (970, 670),
                     fontFace=FONT, fontScale=0.75, color=(240, 240, 240), thickness=1)
         fps = 1. / (time.time() - self.t1) # calculate tracking speed in fps
-        self.store_fps.append(fps)
+        # self.store_fps.append(fps)
         cv2.putText(frame, "FPS: {:.2f}".format(fps), (970, 650), fontFace=FONT, fontScale=0.75, color=(240, 240, 240),
                     thickness=1)
         self.annotate_node(frame, point=self.goal_location, node=self.goal, t=3)
