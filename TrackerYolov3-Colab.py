@@ -119,11 +119,11 @@ class Tracker:
 
     def load_session(self, vp, nl, n, out):
         # experiment meta-data
-        start_point = input("\n>> Do you want to start tracking the video from a specific time point? \n\n > Press enter if you want to start tracking from the beginning \n   OR \n > Type starting point from the start of the video. Minutes (e.g.00:58:26.500 = 58; 01:02:26.500 = 62): \n")
+        start_point = input("\n>> Do you want to start tracking the video from a specific time point? \n\n > Press enter if you want to start tracking from the beginning \n   OR \n > Type starting point from the start of the video. Minutes (e.g.00:58:26.500 = 58): \n")
         if start_point == '':
             self.start_point = None
         else:
-            start_point_seconds = input('\n Seconds (e.g. 00:58:26.500 = 26.5 ): ')
+            start_point_seconds = input('\n Seconds (e.g. 26.5 ):')
             self.start_point = (float(start_point)*60) + float(start_point_seconds)
             self.custom_trial = input('\n From which trial does the tracking start?')
         self.rat = input("\n>> Enter rat number: ")
@@ -140,7 +140,9 @@ class Tracker:
             self.start_nodes.append(int(node))
         if self.trial_type == '4':
             print(
-                '\n> Enter position of 10 minutes trials (e.g. 12 > enter > 27 ...) \n Press enter when all 10 minutes trials are entered. \n If video does not start from the beginning consider trial', self.custom_trial, 'as trial number 1')
+                '\n> Enter position of 10 minutes trials (e.g. 12 > enter > 27 ...) \n Press enter when all 10 minutes trials are entered.')
+            if  self.start_point is not None:
+               print(' \n If video does not start from the beginning consider trial', self.custom_trial, 'as trial number 1')
             for i in range(10):
                 trial = input('\n>>  Enter trial number num {}. Press Enter if done : '.format(i + 1))
                 if trial == '':
@@ -180,6 +182,7 @@ class Tracker:
         self.saved_nodes = []
         self.saved_velocities = []
         self.summary_trial = []
+        self.store_fps = [] # store fps for mean
 
         self.save = '{}/logs/{}_{}'.format(out, str(self.date), 'Rat' + self.rat + '.txt')  # str(date.today())
         ##set output video saved in folder video/'date_unique file name'.mp4
@@ -205,6 +208,7 @@ class Tracker:
             frame_index = int(float(self.start_point) * self.vid_fps)
             # Set video to start at specific frame identified by the index number (=0 if first frame of the video)
             self.cap.set(cv2.CAP_PROP_POS_FRAMES, frame_index)
+
         while True:
             success, self.frame = self.cap.read()
             self.frame_time = self.cap.get(cv2.CAP_PROP_POS_MSEC)
@@ -218,7 +222,7 @@ class Tracker:
                 self.cnn(self.disp_frame)  # , Rat, tracker,Init,boxes
                 self.annotate_frame(self.disp_frame)
                 # Uncomment line below to show video on screen outside Colab
-             #   cv2.imshow('Tracker', self.disp_frame)
+              #  cv2.imshow('Tracker', self.disp_frame)
                 # Keep recording video until it ends
                 self.out.write(self.disp_frame)
                 # Save centroid position in log file if trial started
@@ -257,6 +261,9 @@ class Tracker:
         print("Tracking process finished in: {:0>2}:{:0>2}:{:05.2f}".format(int(hours), int(minutes), seconds))
         self.cap.release()
         self.out.release()
+        import statistics
+        mean_fps = statistics.mean(self.store_fps)
+        print('Average fps',mean_fps)
     # Uncomment outside colab
      #  cv2.destroyAllWindows()
 
@@ -461,7 +468,7 @@ class Tracker:
         print('Timer:', round(duration, 2), 'minutes')
         return int(duration)
 
-    def calculate_velocity(self, time_points):  #
+    def calculate_velocity(self, time_points):
         # Calculate rat speed between two consecutive nodes
         bridges = {('124', '201'): 0.60,
                    ('121', '302'): 1.72,
@@ -546,11 +553,11 @@ class Tracker:
         # Annotate time, fps and goal node of the session
         cv2.putText(frame, str(self.converted_time), (970, 670),
                     fontFace=FONT, fontScale=0.75, color=(240, 240, 240), thickness=1)
-        fps = 1. / (time.time() - self.t1)
+        fps = 1. / (time.time() - self.t1) # calculate tracking speed in fps
+        self.store_fps.append(fps)
         cv2.putText(frame, "FPS: {:.2f}".format(fps), (970, 650), fontFace=FONT, fontScale=0.75, color=(240, 240, 240),
                     thickness=1)
         self.annotate_node(frame, point=self.goal_location, node=self.goal, t=3)
-
         # Frame annotations while waiting rat to be placed in next start node
         if self.start_trial:
             cv2.putText(frame, 'Next trial:' + str(self.trial_num + 1), (60, 60),
